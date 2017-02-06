@@ -15,6 +15,7 @@ type IBoltClient interface {
         OpenBoltDb()
         QueryAccount(accountId string) (model.Account, error)
         Seed()
+        Check() bool
 }
 
 // Real implementation
@@ -64,6 +65,11 @@ func (bc *BoltClient) QueryAccount(accountId string) (model.Account, error) {
 func (bc *BoltClient) Seed() {
         bc.initializeBucket()
         bc.seedAccounts()
+}
+
+// Naive healthcheck, just makes sure the DB connection has been initialized.
+func (bc *BoltClient) Check() bool {
+        return bc.boltDB != nil
 }
 
 // Creates an "AccountBucket" in our BoltDB. It will overwrite any existing bucket of the same name.

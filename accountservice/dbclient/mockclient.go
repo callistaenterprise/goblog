@@ -22,3 +22,8 @@ func (m *MockBoltClient) OpenBoltDb() {
 func (m *MockBoltClient) Seed() {
         // Does nothing
 }
+
+func (m *MockBoltClient) Check() bool {
+        args := m.Mock.Called()
+        return args.Get(0).(bool)
+}

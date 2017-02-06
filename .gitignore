@@ -25,3 +25,8 @@ _testmain.go
 
 accountservice/accountservice
 accountservice/accountservice-linux-amd64
+accountservice/accounts.db
+accountservice/healthchecker-linux-amd64
+
+healthchecker/healthchecker
+healthchecker/healthchecker-linux-amd64
