@@ -30,3 +30,6 @@ accountservice/healthchecker-linux-amd64
 
 healthchecker/healthchecker
 healthchecker/healthchecker-linux-amd64
+
+build
+.gradle

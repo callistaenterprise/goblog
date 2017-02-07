@@ -1,0 +1,32 @@
+server.port: 8888
+
+# Sample configuration of an external Git-repo
+spring.cloud.config.server.git.uri: https://github.com/eriklupander/go-microservice-config.git
+
+logging:
+  level:
+    root: WARN
+    se.callista: INFO
+
+    org.springframework.amqp.rabbit.listener.BlockingQueueConsumer: INFO
+    org.apache.catalina.session.ManagerBase: INFO
+
+    # Set INFO to see the allocated port
+    org.springframework.boot.context.embedded.tomcat.TomcatEmbeddedServletContainer: INFO
+    org.springframework.boot.context.embedded.undertow.UndertowEmbeddedServletContainer: INFO
+
+
+---
+# For deployment in Docker containers
+spring:
+  profiles: docker,native
+  cloud:
+    config:
+      server:
+        git:
+          uri: https://github.com/eriklupander/go-microservice-config.git
+        native:
+          search-locations: file:/config-repo
+
+spring.rabbitmq.host: rabbitmq
+spring.rabbitmq.port: 5672
