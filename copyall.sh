@@ -7,3 +7,6 @@ cd accountservice;go get;go build -o accountservice-linux-amd64;echo built `pwd`
 export GOOS=darwin
 
 docker build -t someprefix/accountservice accountservice/
+
+docker service rm accountservice
+docker service create --name=accountservice --replicas=1 --network=my_network -p=6767:6767 someprefix/accountservice
