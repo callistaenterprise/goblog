@@ -8,13 +8,16 @@ import (
         "github.com/callistaenterprise/goblog/accountservice/dbclient"
         "fmt"
         "net"
+        "github.com/callistaenterprise/goblog/accountservice/messaging"
+        "github.com/callistaenterprise/goblog/accountservice/model"
+        "time"
 )
 
 var DBClient dbclient.IBoltClient
+var MessagingClient messaging.IMessagingClient
 
 func GetAccount(w http.ResponseWriter, r *http.Request) {
-
-	// Read the 'accountId' path parameter from the mux map
+   	// Read the 'accountId' path parameter from the mux map
 	var accountId = mux.Vars(r)["accountId"]
 
         // Read the account struct BoltDB
@@ -28,9 +31,25 @@ func GetAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+        notifyVIP(account)   // Send VIP notification concurrently.
+
         // If found, marshal into JSON, write headers and content
 	data, _ := json.Marshal(account)
         writeJsonResponse(w, http.StatusOK, data)
+}
+
+// If our hard-coded "VIP" account, spawn a goroutine to send a message.
+func notifyVIP(account model.Account) {
+        if account.Id == "10000" {
+                go func(account model.Account) {
+                        vipNotification := model.VipNotification{AccountId: account.Id, ReadAt: time.Now().UTC().String()}
+                        data, _ := json.Marshal(vipNotification)
+                        err := MessagingClient.SendMessage(data, "application/json", "vipQueue")
+                        if err != nil {
+                                fmt.Println(err.Error())
+                        }
+                }(account)
+        }
 }
 
 func HealthCheck(w http.ResponseWriter, r *http.Request) {

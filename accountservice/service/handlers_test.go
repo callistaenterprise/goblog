@@ -8,6 +8,9 @@ import (
         "github.com/callistaenterprise/goblog/accountservice/model"
         "fmt"
         "encoding/json"
+        "github.com/callistaenterprise/goblog/accountservice/messaging"
+        "github.com/stretchr/testify/mock"
+        "time"
 )
 
 
@@ -66,4 +69,25 @@ func TestGetAccountWrongPath(t *testing.T) {
                         })
                 })
         })
+}
+
+func TestNotificationIsSentForVIPAccount(t *testing.T) {
+
+        DBClient := &dbclient.MockBoltClient{}
+        DBClient.On("QueryAccount", "10000").Return(model.Account{Id:"10000", Name:"Person_10000"}, nil)
+
+        MessagingClient := &messaging.MockMessagingClient{}
+        MessagingClient.On("SendMessage", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+        Convey("Given a HTTP req for a VIP account", t, func() {
+                req := httptest.NewRequest("GET", "/accounts/10000", nil)
+                resp := httptest.NewRecorder()
+                Convey("When the request is handled by the Router", func() {
+                        NewRouter().ServeHTTP(resp, req)
+                        Convey("Then the response should be a 200 and the MessageClient should have been invoked", func() {
+                                So(resp.Code, ShouldEqual, 200)
+                                time.Sleep(time.Millisecond * 10)    // Sleep since the Assert below occurs in goroutine
+                                So(MessagingClient.AssertNumberOfCalls(t, "SendMessage", 1), ShouldBeTrue)
+                        })
+        })})
 }
