@@ -46,6 +46,8 @@ func main() {
 
         config.LoadConfiguration(viper.GetString("configServerUrl"), appName, viper.GetString("profile"))
         initializeMessaging()
+
+        // Call the subscribe method with queue name and callback function
 	consumer.Subscribe("vipQueue", onMessage)
 
         // Makes sure connection is closed when service exits.

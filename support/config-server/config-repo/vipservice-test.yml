@@ -1,0 +1,2 @@
+server_port: 6868
+broker_url: amqp://guest:guest@rabbitmq:5672

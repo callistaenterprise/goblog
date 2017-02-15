@@ -9,6 +9,7 @@ import (
 type IMessagingClient interface {
         ConnectToBroker(connectionString string)
         SendMessage(msg []byte, contentType string, queueName string) error
+        Close()
 }
 
 // Real implementation, encapsulates a pointer to an amqp.Connection
@@ -51,4 +52,10 @@ func (m *MessagingClient) SendMessage(body []byte, contentType string, queueName
                         Body:        body,          // Our JSON body as []byte
                 })
         return err
+}
+
+func (m *MessagingClient) Close() {
+        if m.conn != nil {
+                m.conn.Close()
+        }
 }

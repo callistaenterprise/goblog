@@ -14,3 +14,7 @@ func (m *MockMessagingClient) SendMessage(body []byte, contentType string, queue
         args := m.Called(body, contentType, queueName)
         return args.Error(0)
 }
+
+func (m *MockMessagingClient) Close() {
+        m.Called()
+}

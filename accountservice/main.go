@@ -8,6 +8,9 @@ import (
         "github.com/spf13/viper"
         "github.com/callistaenterprise/goblog/accountservice/config"
         "github.com/callistaenterprise/goblog/accountservice/messaging"
+        "os/signal"
+        "os"
+        "syscall"
 )
 
 var appName = "accountservice"
@@ -18,6 +21,9 @@ func main() {
         config.LoadConfiguration(viper.GetString("configServerUrl"), appName, viper.GetString("profile"))
         initializeBoltClient()
         initializeMessaging()
+        handleSigterm(func() {
+
+        })
         service.StartWebServer(viper.GetString("server_port"))
 }
 
@@ -42,4 +48,16 @@ func initializeBoltClient() {
         service.DBClient = &dbclient.BoltClient{}
         service.DBClient.OpenBoltDb()
         service.DBClient.Seed()
+}
+
+// Handles Ctrl+C or most other means of "controlled" shutdown gracefully. Invokes the supplied func before exiting.
+func handleSigterm(handleExit func()) {
+        c := make(chan os.Signal, 1)
+        signal.Notify(c, os.Interrupt)
+        signal.Notify(c, syscall.SIGTERM)
+        go func() {
+                <-c
+                handleExit()
+                os.Exit(1)
+        }()
 }
