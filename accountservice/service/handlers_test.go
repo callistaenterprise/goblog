@@ -13,11 +13,10 @@ import (
         "time"
 )
 
-
-
+var mockRepo = &dbclient.MockBoltClient{}
+var mockMessagingClient = &messaging.MockMessagingClient{}
 
 func TestGetAccount(t *testing.T) {
-        mockRepo := &dbclient.MockBoltClient{}
 
         mockRepo.On("QueryAccount", "123").Return(model.Account{Id:"123", Name:"Person_123"}, nil)
         mockRepo.On("QueryAccount", "456").Return(model.Account{}, fmt.Errorf("Some error"))
@@ -73,11 +72,11 @@ func TestGetAccountWrongPath(t *testing.T) {
 
 func TestNotificationIsSentForVIPAccount(t *testing.T) {
 
-        DBClient := &dbclient.MockBoltClient{}
-        DBClient.On("QueryAccount", "10000").Return(model.Account{Id:"10000", Name:"Person_10000"}, nil)
+        mockRepo.On("QueryAccount", "10000").Return(model.Account{Id:"10000", Name:"Person_10000"}, nil)
+        DBClient = mockRepo
 
-        MessagingClient := &messaging.MockMessagingClient{}
-        MessagingClient.On("SendMessage", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+        mockMessagingClient.On("SendMessage", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+        MessagingClient = mockMessagingClient
 
         Convey("Given a HTTP req for a VIP account", t, func() {
                 req := httptest.NewRequest("GET", "/accounts/10000", nil)
@@ -87,7 +86,7 @@ func TestNotificationIsSentForVIPAccount(t *testing.T) {
                         Convey("Then the response should be a 200 and the MessageClient should have been invoked", func() {
                                 So(resp.Code, ShouldEqual, 200)
                                 time.Sleep(time.Millisecond * 10)    // Sleep since the Assert below occurs in goroutine
-                                So(MessagingClient.AssertNumberOfCalls(t, "SendMessage", 1), ShouldBeTrue)
+                                So(mockMessagingClient.AssertNumberOfCalls(t, "SendMessage", 1), ShouldBeTrue)
                         })
         })})
 }
