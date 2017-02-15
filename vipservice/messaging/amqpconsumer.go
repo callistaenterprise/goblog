@@ -8,7 +8,7 @@ import (
 // Defines our interface for connecting and consuming messages.
 type IMessagingConsumer interface {
         ConnectToBroker(connectionString string)
-        Subscribe(queueName string, handlerFunc func(amqp.Delivery)) error
+        Subscribe(queueName string, handlerFunc func(amqp.Delivery))
         Close()
 }
 
@@ -29,13 +29,13 @@ func (m *MessagingConsumer) ConnectToBroker(connectionString string) {
         }
 }
 
-func (m *MessagingConsumer) Subscribe(queueName string, handlerFunc func(amqp.Delivery)) error {
+func (m *MessagingConsumer) Subscribe(queueName string, handlerFunc func(amqp.Delivery)) {
         ch, err := m.conn.Channel()
         failOnError(err, "Failed to open a channel")
         defer ch.Close()
 
         q, err := ch.QueueDeclare(
-                "vipQueue", // name
+                queueName, // name
                 false,   // durable
                 false,   // delete when usused
                 false,   // exclusive
@@ -55,13 +55,10 @@ func (m *MessagingConsumer) Subscribe(queueName string, handlerFunc func(amqp.De
         )
         failOnError(err, "Failed to register a consumer")
 
-        go func() {
-                for d := range msgs {
-                        // Invoke the OnMessage func we passed as parameter.
-                        handlerFunc(d)
-                }
-        }()
-        return err
+        for d := range msgs {
+                // Invoke the OnMessage func we passed as parameter.
+                handlerFunc(d)
+        }
 }
 
 func (m *MessagingConsumer) Close() {

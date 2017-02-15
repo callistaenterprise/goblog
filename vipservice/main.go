@@ -48,7 +48,7 @@ func main() {
         initializeMessaging()
 
         // Call the subscribe method with queue name and callback function
-	consumer.Subscribe("vipQueue", onMessage)
+	go consumer.Subscribe("vipQueue", onMessage)
 
         // Makes sure connection is closed when service exits.
         handleSigterm(func() {
