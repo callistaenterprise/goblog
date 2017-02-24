@@ -2,7 +2,7 @@ package service
 
 import (
         "net/http"
-        "log"
+        log "github.com/Sirupsen/logrus"
 )
 
 func StartWebServer(port string) {
@@ -10,11 +10,11 @@ func StartWebServer(port string) {
         r := NewRouter()
         http.Handle("/", r)
 
-        log.Println("Starting HTTP service at " + port)
+        log.Infof("Starting HTTP service at %v", port)
         err := http.ListenAndServe(":" + port, nil)
 
         if err != nil {
-                log.Println("An error occured starting HTTP listener at port " + port)
-                log.Println("Error: " + err.Error())
+                log.Errorln("An error occured starting HTTP listener at port " + port)
+                log.Errorln("Error: " + err.Error())
         }
 }

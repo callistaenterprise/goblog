@@ -6,11 +6,11 @@ import (
 	"encoding/json"
 	"strconv"
         "github.com/callistaenterprise/goblog/accountservice/dbclient"
-        "fmt"
         "net"
         "github.com/callistaenterprise/goblog/accountservice/messaging"
         "github.com/callistaenterprise/goblog/accountservice/model"
         "time"
+        log "github.com/Sirupsen/logrus"
 )
 
 var DBClient dbclient.IBoltClient
@@ -26,7 +26,7 @@ func GetAccount(w http.ResponseWriter, r *http.Request) {
 
         // If err, return a 404
 	if err != nil {
-                fmt.Println("Some error occured serving " + accountId + ": " + err.Error())
+                log.Errorf("Some error occured serving " + accountId + ": " + err.Error())
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -46,7 +46,7 @@ func notifyVIP(account model.Account) {
                         data, _ := json.Marshal(vipNotification)
                         err := MessagingClient.SendMessage(data, "application/json", "vipQueue")
                         if err != nil {
-                                fmt.Println(err.Error())
+                                log.Errorln(err.Error())
                         }
                 }(account)
         }

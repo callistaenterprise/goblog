@@ -1,7 +1,6 @@
 package main
 
 import (
-        "fmt"
         "github.com/callistaenterprise/goblog/accountservice/service"
         "github.com/callistaenterprise/goblog/accountservice/dbclient"
         "flag"
@@ -11,13 +10,38 @@ import (
         "os/signal"
         "os"
         "syscall"
+        log "github.com/Sirupsen/logrus"
+        "bytes"
+        "fmt"
 )
 
 var appName = "accountservice"
 
+type PlainFormatter struct {
+
+}
+func (f PlainFormatter) Format(e *log.Entry) ([]byte, error) {
+        var b *bytes.Buffer
+        if e.Buffer != nil {
+                b = e.Buffer
+        } else {
+                b = &bytes.Buffer{}
+        }
+        fmt.Fprintf(b, "%s", e.Message)
+        b.WriteByte('\n')
+        return b.Bytes(), nil
+}
+
+func initLogger() {
+        if viper.GetString("profile") != "dev" {
+                log.SetFormatter(&PlainFormatter{})
+        }
+}
+
 func main() {
-        fmt.Printf("Starting %v\n", appName)
+        log.Info("Starting %v\n", appName)
         parseFlags()
+        initLogger()
         config.LoadConfiguration(viper.GetString("configServerUrl"), appName, viper.GetString("profile"))
         initializeBoltClient()
         initializeMessaging()

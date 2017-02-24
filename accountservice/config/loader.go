@@ -6,12 +6,13 @@ import (
         "io/ioutil"
         "encoding/json"
         "github.com/spf13/viper"
+        log "github.com/Sirupsen/logrus"
 )
 
 func LoadConfiguration(configServerUrl string, appName string, profile string) {
         body, err := fetchConfiguration(fmt.Sprintf("%s/%s-%s/%s", configServerUrl, appName, profile, profile))
         if err != nil {
-                fmt.Printf("Couldn't load configuration, cannot start. Terminating. Error: %v", err.Error())
+                log.Errorf("Couldn't load configuration, cannot start. Terminating. Error: %v", err.Error())
                 panic("Couldn't load configuration, cannot start. Terminating. Error: " + err.Error())
         }
         parseConfiguration(body)
@@ -29,7 +30,7 @@ func parseConfiguration(body []byte) {
 func fetchConfiguration(url string) ([]byte, error) {
         resp, err := http.Get(url)
         if err != nil {
-                fmt.Printf("Couldn't load configuration, cannot start. Terminating. Error: %v", err.Error())
+                log.Errorf("Couldn't load configuration, cannot start. Terminating. Error: %v", err.Error())
                 panic("Couldn't load configuration, cannot start. Terminating. Error: " + err.Error())
         }
         body, err := ioutil.ReadAll(resp.Body)

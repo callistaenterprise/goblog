@@ -2,10 +2,10 @@ package dbclient
 
 import (
         "github.com/boltdb/bolt"
-        "log"
         "strconv"
         "github.com/callistaenterprise/goblog/accountservice/model"
         "encoding/json"
+        log "github.com/Sirupsen/logrus"
         "fmt"
 )
 
@@ -108,6 +108,6 @@ func (bc *BoltClient) seedAccounts() {
                         return err
                 })
         }
-        fmt.Printf("Seeded %v fake accounts...\n", total)
+        log.Infof("Seeded %v fake accounts...\n", total)
 }
 
