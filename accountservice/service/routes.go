@@ -28,4 +28,10 @@ var routes = Routes{
                 "/health",
                 HealthCheck,
         },
+        Route{
+                "Testability",
+                "GET",
+                "/testability/healthy/{state}",
+                SetHealthyState,
+        },
 }
