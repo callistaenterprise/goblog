@@ -12,6 +12,8 @@ import (
 
 var DBClient dbclient.IBoltClient
 
+var isHealthy = true
+
 func GetAccount(w http.ResponseWriter, r *http.Request) {
 
 	// Read the 'accountId' path parameter from the mux map
@@ -36,13 +38,26 @@ func GetAccount(w http.ResponseWriter, r *http.Request) {
 func HealthCheck(w http.ResponseWriter, r *http.Request) {
         // Since we're here, we already know that HTTP service is up. Let's just check the state of the boltdb connection
         dbUp := DBClient.Check()
-        if dbUp {
+        if dbUp && isHealthy {
                 data, _ := json.Marshal(healthCheckResponse{Status: "UP"})
                 writeJsonResponse(w, http.StatusOK, data)
         } else {
                 data, _ := json.Marshal(healthCheckResponse{Status: "Database unaccessible"})
                 writeJsonResponse(w, http.StatusServiceUnavailable, data)
         }
+}
+
+func SetHealthyState(w http.ResponseWriter, r *http.Request) {
+        // Read the 'accountId' path parameter from the mux map
+        var state, err = strconv.ParseBool(mux.Vars(r)["state"])
+        if err != nil {
+                fmt.Println("Invalid request to SetHealthyState, allowed values are true or false")
+                w.WriteHeader(http.StatusBadRequest)
+                return
+        }
+        
+        isHealthy = state
+        w.WriteHeader(http.StatusOK)
 }
 
 func writeJsonResponse(w http.ResponseWriter, status int, data []byte) {
