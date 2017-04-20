@@ -42,7 +42,6 @@ func TestGetAccount(t *testing.T) {
                                 So(resp.Code, ShouldEqual, 200)
 
                                 account := model.Account{}
-                                fmt.Println(string(resp.Body.Bytes()))
                                 json.Unmarshal(resp.Body.Bytes(), &account)
                                 So(account.Id, ShouldEqual, "123")
                                 So(account.Name, ShouldEqual, "Person_123")
