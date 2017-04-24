@@ -1,10 +1,9 @@
 package main
 
 import (
-        "fmt"
-        "github.com/callistaenterprise/goblog/accountservice/service"
-        "github.com/callistaenterprise/goblog/accountservice/dbclient"
-        "flag"
+	"fmt"
+	"github.com/callistaenterprise/goblog/accountservice/dbclient"
+	"github.com/callistaenterprise/goblog/accountservice/service"
         "github.com/spf13/viper"
         "github.com/callistaenterprise/goblog/accountservice/config"
 )
@@ -12,11 +11,11 @@ import (
 var appName = "accountservice"
 
 func main() {
-        fmt.Printf("Starting %v\n", appName)
+	fmt.Printf("Starting %v\n", appName)
         parseFlags()
         config.LoadConfiguration(viper.GetString("configServerUrl"), appName, viper.GetString("profile"))
-        initializeBoltClient()
-        service.StartWebServer(viper.GetString("server_port"))
+	initializeBoltClient()
+	service.StartWebServer("6767")
 }
 
 func parseFlags() {
@@ -30,7 +29,7 @@ func parseFlags() {
 
 
 func initializeBoltClient() {
-        service.DBClient = &dbclient.BoltClient{}
-        service.DBClient.OpenBoltDb()
-        service.DBClient.Seed()
+	service.DBClient = &dbclient.BoltClient{}
+	service.DBClient.OpenBoltDb()
+	service.DBClient.Seed()
 }
