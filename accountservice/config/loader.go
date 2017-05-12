@@ -8,22 +8,17 @@ import (
         "github.com/spf13/viper"
 )
 
-func LoadConfiguration(configServerUrl string, appName string, profile string) {
-        body, err := fetchConfiguration(fmt.Sprintf("%s/%s-%s/%s", configServerUrl, appName, profile, profile))
+
+// Loads config from for example http://configserver:8888/accountservice/test/P8
+func LoadConfigurationFromBranch(configServerUrl string, appName string, profile string, branch string) {
+        url := fmt.Sprintf("%s/%s/%s/%s", configServerUrl, appName, profile, branch)
+        fmt.Printf("Loading config from %s\n", url)
+        body, err := fetchConfiguration(url)
         if err != nil {
                 fmt.Printf("Couldn't load configuration, cannot start. Terminating. Error: %v", err.Error())
                 panic("Couldn't load configuration, cannot start. Terminating. Error: " + err.Error())
         }
         parseConfiguration(body)
-}
-
-func parseConfiguration(body []byte) {
-        var cloudConfig springCloudConfig
-        json.Unmarshal(body, &cloudConfig)
-
-        for key, value := range cloudConfig.PropertySources[0].Source {
-                viper.Set(key, value)
-        }
 }
 
 func fetchConfiguration(url string) ([]byte, error) {
@@ -35,6 +30,24 @@ func fetchConfiguration(url string) ([]byte, error) {
         body, err := ioutil.ReadAll(resp.Body)
         return body, err
 }
+
+func parseConfiguration(body []byte) {
+        var cloudConfig springCloudConfig
+        err := json.Unmarshal(body, &cloudConfig)
+        if err != nil {
+                panic("Cannot parse configuration, message: " + err.Error())
+        }
+
+        for key, value := range cloudConfig.PropertySources[0].Source {
+                viper.Set(key, value)
+                fmt.Printf("Loading config property %v => %v\n", key, value)
+        }
+        if viper.IsSet("server_name") {
+                fmt.Printf("Successfully loaded configuration for service %s\n", viper.GetString("server_name"))
+        }
+}
+
+
 
 type springCloudConfig struct {
         Name            string           `json:"name"`

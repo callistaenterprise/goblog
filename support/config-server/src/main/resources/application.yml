@@ -19,14 +19,28 @@ logging:
 ---
 # For deployment in Docker containers
 spring:
-  profiles: docker,native
+  profiles: docker
   cloud:
+    bus:
+      trace:
+        enabled: true
     config:
       server:
         git:
           uri: https://github.com/eriklupander/go-microservice-config.git
-        native:
-          search-locations: file:/config-repo
+#        native:
+#          search-locations: file:/config-repo
+# spring.cloud.bus.trace.enabled=true
+encrypt:
+  key-store:
+    location: file:/server.jks
+    password: letmein
+    alias: goblogkey
+    secret: changeme
+    
+eureka:
+  client:
+    enabled: false
 
 spring.rabbitmq.host: rabbitmq
 spring.rabbitmq.port: 5672

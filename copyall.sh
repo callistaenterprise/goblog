@@ -18,4 +18,4 @@ docker service create --name=accountservice --replicas=1 --network=my_network -p
 
 docker build -t someprefix/vipservice vipservice/
 docker service rm vipservice
-docker service create --name=vipservice --replicas=1 --network=my_network -p=6868:6868 someprefix/vipservice
+docker service create --name=vipservice --replicas=1 --network=my_network someprefix/vipservice

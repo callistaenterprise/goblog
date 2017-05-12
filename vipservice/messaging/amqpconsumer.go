@@ -46,7 +46,7 @@ func (m *MessagingConsumer) Subscribe(queueName string, handlerFunc func(amqp.De
 
         msgs, err := ch.Consume(
                 q.Name, // queue
-                "",     // consumer
+                "vipservice", // consumer
                 true,   // auto-ack
                 false,  // exclusive
                 false,  // no-local

@@ -15,6 +15,7 @@ func TestParseConfiguration(t *testing.T) {
                         parseConfiguration([]byte(body))
 
                         Convey("Then Viper should have been populated with values from Source", func() {
+                                So(viper.GetString("server_name"), ShouldEqual, "Accountservice DEV")
                                 So(viper.GetString("server_port"), ShouldEqual, "6767")
                         })
                 })
