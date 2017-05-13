@@ -1,2 +1,0 @@
-server_port: 6767
-broker_url: amqp://guest:guest@192.168.99.100:5672

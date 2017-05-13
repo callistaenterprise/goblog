@@ -6,4 +6,4 @@ ADD healthchecker-linux-amd64 /
 
 HEALTHCHECK --interval=1s --timeout=3s CMD ["./healthchecker-linux-amd64", "-port=6868"] || exit 1
 
-ENTRYPOINT ["./vipservice-linux-amd64", "-profile=test"]
+ENTRYPOINT ["./vipservice-linux-amd64", "-configServerUrl=http://configserver:8888", "-profile=test", "-configBranch=P9"]

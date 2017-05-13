@@ -3,6 +3,7 @@ package messaging
 import (
         "github.com/streadway/amqp"
         "fmt"
+        "github.com/Sirupsen/logrus"
 )
 
 // Defines our interface for connecting and consuming messages.
@@ -46,7 +47,7 @@ func (m *MessagingConsumer) Subscribe(queueName string, handlerFunc func(amqp.De
 
         msgs, err := ch.Consume(
                 q.Name, // queue
-                "",     // consumer
+                "vipservice", // consumer
                 true,   // auto-ack
                 false,  // exclusive
                 false,  // no-local
@@ -69,7 +70,7 @@ func (m *MessagingConsumer) Close() {
 
 func failOnError(err error, msg string) {
         if err != nil {
-                fmt.Printf("%s: %s", msg, err)
+                logrus.Printf("%s: %s", msg, err)
                 panic(fmt.Sprintf("%s: %s", msg, err))
         }
 }

@@ -25,70 +25,73 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"github.com/Sirupsen/logrus"
+	"github.com/callistaenterprise/goblog/vipservice/config"
 	"github.com/callistaenterprise/goblog/vipservice/messaging"
 	"github.com/callistaenterprise/goblog/vipservice/service"
 	"github.com/spf13/viper"
 	"github.com/streadway/amqp"
-        "github.com/callistaenterprise/goblog/vipservice/config"
-        "os"
-        "os/signal"
-        "syscall"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 var appName = "vipservice"
 
 var consumer messaging.IMessagingConsumer
 
+func init() {
+	configServerUrl := flag.String("configServerUrl", "http://configserver:8888", "Address to config server")
+	profile := flag.String("profile", "test", "Environment profile, something similar to spring profiles")
+	configBranch := flag.String("configBranch", "master", "git branch to fetch configuration from")
+	flag.Parse()
+
+	viper.Set("profile", *profile)
+	viper.Set("configServerUrl", *configServerUrl)
+	viper.Set("configBranch", *configBranch)
+}
+
 func main() {
-	fmt.Println("Starting " + appName + "...")
-	parseFlags()
+	logrus.SetFormatter(&logrus.JSONFormatter{})
+	logrus.Println("Starting " + appName + "...")
 
-        config.LoadConfiguration(viper.GetString("configServerUrl"), appName, viper.GetString("profile"))
-        initializeMessaging()
+	config.LoadConfigurationFromBranch(viper.GetString("configServerUrl"), appName, viper.GetString("profile"), viper.GetString("configBranch"))
+	initializeMessaging()
 
-        // Call the subscribe method with queue name and callback function
+	// Call the subscribe method with queue name and callback function
 	go consumer.Subscribe("vipQueue", onMessage)
 
-        // Makes sure connection is closed when service exits.
-        handleSigterm(func() {
-                if consumer != nil {
-                        consumer.Close()
-                }
-        })
+	// Makes sure connection is closed when service exits.
+	handleSigterm(func() {
+		if consumer != nil {
+			consumer.Close()
+		}
+	})
+	go config.StartListener(appName, viper.GetString("amqp_server_url"), viper.GetString("config_event_bus"))
 
-        service.StartWebServer(viper.GetString("server_port"))
+	service.StartWebServer(viper.GetString("server_port"))
 }
 
 func onMessage(delivery amqp.Delivery) {
-	fmt.Printf("Got a message: %v\n", string(delivery.Body))
-}
-
-func parseFlags() {
-	profile := flag.String("profile", "test", "Environment profile, something similar to spring profiles")
-	configServerUrl := flag.String("configServerUrl", "http://configserver:8888", "Address to config server")
-
-	flag.Parse()
-	viper.Set("profile", *profile)
-	viper.Set("configServerUrl", *configServerUrl)
+	logrus.Printf("Got a message: %v\n", string(delivery.Body))
 }
 
 func initializeMessaging() {
-	if !viper.IsSet("broker_url") {
+	if !viper.IsSet("amqp_server_url") {
 		panic("No 'broker_url' set in configuration, cannot start")
 	}
 	consumer = &messaging.MessagingConsumer{}
-	consumer.ConnectToBroker(viper.GetString("broker_url"))
+	consumer.ConnectToBroker(viper.GetString("amqp_server_url"))
 }
 
 // Handles Ctrl+C or most other means of "controlled" shutdown gracefully. Invokes the supplied func before exiting.
 func handleSigterm(handleExit func()) {
-        c := make(chan os.Signal, 1)
-        signal.Notify(c, os.Interrupt)
-        signal.Notify(c, syscall.SIGTERM)
-        go func() {
-                <-c
-                handleExit()
-                os.Exit(1)
-        }()
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	signal.Notify(c, syscall.SIGTERM)
+	go func() {
+		<-c
+		handleExit()
+		os.Exit(1)
+	}()
 }

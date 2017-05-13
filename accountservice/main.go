@@ -1,26 +1,26 @@
 package main
 
 import (
-        "github.com/callistaenterprise/goblog/accountservice/service"
-        "github.com/callistaenterprise/goblog/accountservice/dbclient"
-        "flag"
-        "github.com/spf13/viper"
-        "github.com/callistaenterprise/goblog/accountservice/config"
-        "github.com/callistaenterprise/goblog/accountservice/messaging"
-        "os/signal"
-        "os"
-        "syscall"
-        log "github.com/Sirupsen/logrus"
         "bytes"
+        "flag"
         "fmt"
+        "github.com/Sirupsen/logrus"
+        "github.com/callistaenterprise/goblog/accountservice/config"
+        "github.com/callistaenterprise/goblog/accountservice/dbclient"
+        "github.com/callistaenterprise/goblog/accountservice/messaging"
+        "github.com/callistaenterprise/goblog/accountservice/service"
+        "github.com/spf13/viper"
+        "os"
+        "os/signal"
+        "syscall"
 )
 
 var appName = "accountservice"
 
 type PlainFormatter struct {
-
 }
-func (f PlainFormatter) Format(e *log.Entry) ([]byte, error) {
+
+func (f PlainFormatter) Format(e *logrus.Entry) ([]byte, error) {
         var b *bytes.Buffer
         if e.Buffer != nil {
                 b = e.Buffer
@@ -31,41 +31,48 @@ func (f PlainFormatter) Format(e *log.Entry) ([]byte, error) {
         b.WriteByte('\n')
         return b.Bytes(), nil
 }
+func init() {
+        profile := flag.String("profile", "test", "Environment profile, something similar to spring profiles")
+        configServerUrl := flag.String("configServerUrl", "http://configserver:8888", "Address to config server")
+        configBranch := flag.String("configBranch", "master", "git branch to fetch configuration from")
+
+        flag.Parse()
+
+        viper.Set("profile", *profile)
+        viper.Set("configServerUrl", *configServerUrl)
+        viper.Set("configBranch", *configBranch)
+}
 
 func initLogger() {
         if viper.GetString("profile") != "dev" {
-                log.SetFormatter(&PlainFormatter{})
+                //logrus.SetFormatter(&PlainFormatter{})
         }
 }
 
 func main() {
-        log.Info("Starting %v\n", appName)
-        parseFlags()
+        logrus.SetFormatter(&logrus.JSONFormatter{})
+        logrus.Info("Starting %v\n", appName)
         initLogger()
-        config.LoadConfiguration(viper.GetString("configServerUrl"), appName, viper.GetString("profile"))
+        config.LoadConfigurationFromBranch(
+                viper.GetString("configServerUrl"),
+                appName,
+                viper.GetString("profile"),
+                viper.GetString("configBranch"))
         initializeBoltClient()
         initializeMessaging()
         handleSigterm(func() {
 
         })
+        go config.StartListener(appName, viper.GetString("amqp_server_url"), viper.GetString("config_event_bus"))
         service.StartWebServer(viper.GetString("server_port"))
 }
 
-func parseFlags() {
-        profile := flag.String("profile", "test", "Environment profile, something similar to spring profiles")
-        configServerUrl := flag.String("configServerUrl", "http://configserver:8888", "Address to config server")
-
-        flag.Parse()
-        viper.Set("profile", *profile)
-        viper.Set("configServerUrl", *configServerUrl)
-}
-
 func initializeMessaging() {
-        if !viper.IsSet("broker_url") {
-                panic("No 'broker_url' set in configuration, cannot start")
+        if !viper.IsSet("amqp_server_url") {
+                panic("No 'amqp_server_url' set in configuration, cannot start")
         }
         service.MessagingClient = &messaging.MessagingClient{}
-        service.MessagingClient.ConnectToBroker(viper.GetString("broker_url"))
+        service.MessagingClient.ConnectToBroker(viper.GetString("amqp_server_url"))
 }
 
 func initializeBoltClient() {

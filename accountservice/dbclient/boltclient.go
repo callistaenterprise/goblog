@@ -5,7 +5,7 @@ import (
         "strconv"
         "github.com/callistaenterprise/goblog/accountservice/model"
         "encoding/json"
-        log "github.com/Sirupsen/logrus"
+        logrus "github.com/Sirupsen/logrus"
         "fmt"
 )
 
@@ -27,7 +27,7 @@ func (bc *BoltClient) OpenBoltDb() {
         var err error
         bc.boltDB, err = bolt.Open("accounts.db", 0600, nil)
         if err != nil {
-                log.Fatal(err)
+                logrus.Fatal(err)
         }
 }
 
@@ -108,6 +108,6 @@ func (bc *BoltClient) seedAccounts() {
                         return err
                 })
         }
-        log.Infof("Seeded %v fake accounts...\n", total)
+        logrus.Infof("Seeded %v fake accounts...\n", total)
 }
 

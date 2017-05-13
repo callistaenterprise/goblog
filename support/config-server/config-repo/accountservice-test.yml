@@ -1,2 +1,0 @@
-server_port: 6767
-broker_url: amqp://guest:guest@rabbitmq:5672
