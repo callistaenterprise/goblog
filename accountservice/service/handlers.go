@@ -6,16 +6,17 @@ import (
         "encoding/json"
         "github.com/callistaenterprise/goblog/accountservice/dbclient"
         "fmt"
-        "github.com/callistaenterprise/goblog/accountservice/messaging"
+        "github.com/callistaenterprise/goutil/messaging"
         "github.com/callistaenterprise/goblog/accountservice/model"
         "time"
         "io/ioutil"
         "strconv"
-        "net"
+        "github.com/callistaenterprise/goutil/util"
 )
 
 var DBClient dbclient.IBoltClient
 var MessagingClient messaging.IMessagingClient
+var MessagingConsumer messaging.IMessagingConsumer
 var isHealthy = true
 
 var client = &http.Client{}
@@ -34,7 +35,7 @@ func GetAccount(w http.ResponseWriter, r *http.Request) {
 
         // Read the account struct BoltDB
         account, err := DBClient.QueryAccount(accountId)
-        account.ServedBy = getIP()
+        account.ServedBy = util.GetIP()
 
         // If err, return a 404
         if err != nil {
@@ -62,7 +63,7 @@ func notifyVIP(account model.Account) {
                 go func(account model.Account) {
                         vipNotification := model.VipNotification{AccountId: account.Id, ReadAt: time.Now().UTC().String()}
                         data, _ := json.Marshal(vipNotification)
-                        err := MessagingClient.SendMessage(data, "application/json", "vipQueue")
+                        err := MessagingClient.SendMessage(data, "application/json", "vipExchange", "queue")
                         if err != nil {
                                 fmt.Println(err.Error())
                         }
@@ -116,22 +117,6 @@ func writeJsonResponse(w http.ResponseWriter, status int, data []byte) {
         w.Header().Set("Content-Length", strconv.Itoa(len(data)))
         w.WriteHeader(status)
         w.Write(data)
-}
-
-func getIP() string {
-        addrs, err := net.InterfaceAddrs()
-        if err != nil {
-                return "error"
-        }
-        for _, address := range addrs {
-                // check the address type and if it is not a loopback the display it
-                if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-                        if ipnet.IP.To4() != nil {
-                                return ipnet.IP.String()
-                        }
-                }
-        }
-        panic("Unable to determine local IP address (non loopback). Exiting.")
 }
 
 type healthCheckResponse struct {
