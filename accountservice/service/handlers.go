@@ -14,7 +14,8 @@ import (
         "github.com/callistaenterprise/goutil/util"
 )
 
-var DBClient dbclient.IBoltClient
+// var DBClient dbclient.IBoltClient
+var DBClient dbclient.IGormClient
 var MessagingClient messaging.IMessagingClient
 var MessagingConsumer messaging.IMessagingConsumer
 var isHealthy = true
@@ -59,11 +60,11 @@ func GetAccount(w http.ResponseWriter, r *http.Request) {
 
 // If our hard-coded "VIP" account, spawn a goroutine to send a message.
 func notifyVIP(account model.Account) {
-        if account.Id == "10000" {
+        if account.ID == "10000" {
                 go func(account model.Account) {
-                        vipNotification := model.VipNotification{AccountId: account.Id, ReadAt: time.Now().UTC().String()}
+                        vipNotification := model.VipNotification{AccountId: account.ID, ReadAt: time.Now().UTC().String()}
                         data, _ := json.Marshal(vipNotification)
-                        err := MessagingClient.SendMessage(data, "application/json", "vipExchange", "queue")
+                        err := MessagingClient.SendMessage(data, "application/json", "vipExchange", "direct")
                         if err != nil {
                                 fmt.Println(err.Error())
                         }
