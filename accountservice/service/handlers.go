@@ -6,12 +6,12 @@ import (
         "encoding/json"
         "github.com/callistaenterprise/goblog/accountservice/dbclient"
         "fmt"
-        "github.com/callistaenterprise/goutil/messaging"
+        "github.com/callistaenterprise/goblog/common/messaging"
         "github.com/callistaenterprise/goblog/accountservice/model"
         "time"
         "io/ioutil"
         "strconv"
-        "github.com/callistaenterprise/goutil/util"
+        "github.com/callistaenterprise/goblog/common/util"
 )
 
 var DBClient dbclient.IBoltClient

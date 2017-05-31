@@ -26,8 +26,8 @@ package main
 import (
         "flag"
         "fmt"
-        "github.com/callistaenterprise/goutil/config"
-        "github.com/callistaenterprise/goutil/messaging"
+        "github.com/callistaenterprise/goblog/common/config"
+        "github.com/callistaenterprise/goblog/common/messaging"
         "github.com/callistaenterprise/goblog/vipservice/service"
         "github.com/spf13/viper"
         "github.com/streadway/amqp"
@@ -58,7 +58,7 @@ func main() {
         initializeMessaging()
 
         // Call the subscribe method with queue name and callback function
-        consumer.Subscribe("vipExchange", "queue", appName, onMessage)
+        consumer.Subscribe("vipExchange", "direct", appName, onMessage)
 
         // Makes sure connection is closed when service exits.
         handleSigterm(func() {

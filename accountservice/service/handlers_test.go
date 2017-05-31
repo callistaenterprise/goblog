@@ -8,7 +8,7 @@ import (
         "github.com/callistaenterprise/goblog/accountservice/model"
         "fmt"
         "encoding/json"
-        "github.com/callistaenterprise/goutil/messaging"
+        "github.com/callistaenterprise/goblog/common/messaging"
         "gopkg.in/h2non/gock.v1"
 )
 
