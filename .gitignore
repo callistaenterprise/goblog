@@ -33,6 +33,7 @@ healthchecker/healthchecker-linux-amd64
 
 vipservice/vipservice-linux-amd64
 vipservice/healthchecker-linux-amd64
+vipservice/vipservice
 
 build
 .gradle

@@ -16,7 +16,6 @@ import (
 
 var DBClient dbclient.IBoltClient
 var MessagingClient messaging.IMessagingClient
-var MessagingConsumer messaging.IMessagingConsumer
 var isHealthy = true
 
 var client = &http.Client{}
@@ -63,7 +62,8 @@ func notifyVIP(account model.Account) {
                 go func(account model.Account) {
                         vipNotification := model.VipNotification{AccountId: account.Id, ReadAt: time.Now().UTC().String()}
                         data, _ := json.Marshal(vipNotification)
-                        err := MessagingClient.SendMessage(data, "application/json", "vipExchange", "queue")
+                        fmt.Printf("Notifying VIP account %v\n", account.Id)
+                        err := MessagingClient.PublishOnQueue(data, "vip_queue")
                         if err != nil {
                                 fmt.Println(err.Error())
                         }

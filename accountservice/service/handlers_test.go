@@ -10,10 +10,18 @@ import (
         "encoding/json"
         "github.com/callistaenterprise/goblog/common/messaging"
         "gopkg.in/h2non/gock.v1"
+        "github.com/stretchr/testify/mock"
+        "time"
 )
 
+// mocks for boltdb and messsaging
 var mockRepo = &dbclient.MockBoltClient{}
 var mockMessagingClient = &messaging.MockMessagingClient{}
+
+// mock types
+var anyString = mock.AnythingOfType("string")
+var anyByteArray = mock.AnythingOfType("[]uint8")
+
 func init() {
         gock.InterceptClient(client)
 }
@@ -110,23 +118,23 @@ func TestGetAccountNoQuote(t *testing.T) {
         })
 }
 
-//func TestNotificationIsSentForVIPAccount(t *testing.T) {
-//
-//        mockRepo.On("QueryAccount", "10000").Return(model.Account{Id:"10000", Name:"Person_10000"}, nil)
-//        DBClient = mockRepo
-//
-//        mockMessagingClient.On("SendMessage", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-//        MessagingClient = mockMessagingClient
-//
-//        Convey("Given a HTTP req for a VIP account", t, func() {
-//                req := httptest.NewRequest("GET", "/accounts/10000", nil)
-//                resp := httptest.NewRecorder()
-//                Convey("When the request is handled by the Router", func() {
-//                        NewRouter().ServeHTTP(resp, req)
-//                        Convey("Then the response should be a 200 and the MessageClient should have been invoked", func() {
-//                                So(resp.Code, ShouldEqual, 200)
-//                                time.Sleep(time.Millisecond * 10)    // Sleep since the Assert below occurs in goroutine
-//                                So(mockMessagingClient.AssertNumberOfCalls(t, "SendMessage", 1), ShouldBeTrue)
-//                        })
-//        })})
-//}
+func TestNotificationIsSentForVIPAccount(t *testing.T) {
+
+        mockRepo.On("QueryAccount", "10000").Return(model.Account{Id:"10000", Name:"Person_10000"}, nil)
+        DBClient = mockRepo
+
+        mockMessagingClient.On("Publish", anyByteArray, anyString, anyString).Return(nil)
+        MessagingClient = mockMessagingClient
+
+        Convey("Given a HTTP req for a VIP account", t, func() {
+                req := httptest.NewRequest("GET", "/accounts/10000", nil)
+                resp := httptest.NewRecorder()
+                Convey("When the request is handled by the Router", func() {
+                        NewRouter().ServeHTTP(resp, req)
+                        Convey("Then the response should be a 200 and the MessageClient should have been invoked", func() {
+                                So(resp.Code, ShouldEqual, 200)
+                                time.Sleep(time.Millisecond * 10)    // Sleep since the Assert below occurs in goroutine
+                                So(mockMessagingClient.AssertNumberOfCalls(t, "Publish", 1), ShouldBeTrue)
+                        })
+        })})
+}
