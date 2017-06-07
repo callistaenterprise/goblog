@@ -123,7 +123,7 @@ func TestNotificationIsSentForVIPAccount(t *testing.T) {
         mockRepo.On("QueryAccount", "10000").Return(model.Account{Id:"10000", Name:"Person_10000"}, nil)
         DBClient = mockRepo
 
-        mockMessagingClient.On("Publish", anyByteArray, anyString, anyString).Return(nil)
+        mockMessagingClient.On("PublishOnQueue", anyByteArray, anyString).Return(nil)
         MessagingClient = mockMessagingClient
 
         Convey("Given a HTTP req for a VIP account", t, func() {
@@ -134,7 +134,7 @@ func TestNotificationIsSentForVIPAccount(t *testing.T) {
                         Convey("Then the response should be a 200 and the MessageClient should have been invoked", func() {
                                 So(resp.Code, ShouldEqual, 200)
                                 time.Sleep(time.Millisecond * 10)    // Sleep since the Assert below occurs in goroutine
-                                So(mockMessagingClient.AssertNumberOfCalls(t, "Publish", 1), ShouldBeTrue)
+                                So(mockMessagingClient.AssertNumberOfCalls(t, "PublishOnQueue", 1), ShouldBeTrue)
                         })
         })})
 }

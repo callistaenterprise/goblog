@@ -21,7 +21,7 @@ func init() {
 	configBranch := flag.String("configBranch", "master", "git branch to fetch configuration from")
 
 	flag.Parse()
-	
+
 	viper.Set("profile", *profile)
 	viper.Set("configServerUrl", *configServerUrl)
 	viper.Set("configBranch", *configBranch)
@@ -40,7 +40,6 @@ func main() {
 	handleSigterm(func() {
 		service.MessagingClient.Close()
 	})
-	service.MessagingClient.Subscribe(viper.GetString("config_event_bus"), "topic", appName, config.HandleRefreshEvent)
 	service.StartWebServer(viper.GetString("server_port"))
 }
 
@@ -51,6 +50,7 @@ func initializeMessaging() {
 
 	service.MessagingClient = &messaging.MessagingClient{}
 	service.MessagingClient.ConnectToBroker(viper.GetString("amqp_server_url"))
+	service.MessagingClient.Subscribe(viper.GetString("config_event_bus"), "topic", appName, config.HandleRefreshEvent)
 }
 
 func initializeBoltClient() {
