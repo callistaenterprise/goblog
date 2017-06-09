@@ -58,7 +58,13 @@ func main() {
 		appName,
 		viper.GetString("profile"),
 		viper.GetString("configBranch"))
-	initializeBoltClient()
+	//initializeBoltClient()
+
+	service.DBClient = &dbclient.GormClient{}
+	service.DBClient.SetupDB(viper.GetString("cockroachdb_conn_url"))
+	service.DBClient.SeedAccounts()
+	defer service.DBClient.Close()
+
 	initializeMessaging()
 	handleSigterm(func() {
 		service.MessagingClient.Close()
@@ -77,9 +83,9 @@ func initializeMessaging() {
 }
 
 func initializeBoltClient() {
-	service.DBClient = &dbclient.BoltClient{}
-	service.DBClient.OpenBoltDb()
-	service.DBClient.Seed()
+	// service.DBClient = &dbclient.BoltClient{}
+	// service.DBClient.OpenBoltDb()
+	//  service.DBClient.Seed()
 }
 
 // Handles Ctrl+C or most other means of "controlled" shutdown gracefully. Invokes the supplied func before exiting.

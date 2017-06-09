@@ -14,8 +14,7 @@ import (
         "time"
 )
 
-// mocks for boltdb and messsaging
-var mockRepo = &dbclient.MockBoltClient{}
+var mockRepo = &dbclient.MockGormClient{}
 var mockMessagingClient = &messaging.MockMessagingClient{}
 
 // mock types
@@ -33,9 +32,8 @@ func TestGetAccount(t *testing.T) {
                 MatchParam("strength", "4").
                 Reply(200).
                 BodyString(`{"quote":"May the source be with you. Always.","ipAddress":"10.0.0.5:8080","language":"en"}`)
-
         
-        mockRepo.On("QueryAccount", "123").Return(model.Account{Id:"123", Name:"Person_123"}, nil)
+        mockRepo.On("QueryAccount", "123").Return(model.Account{ID:"123", Name:"Person_123"}, nil)
         mockRepo.On("QueryAccount", "456").Return(model.Account{}, fmt.Errorf("Some error"))
         DBClient = mockRepo
 
@@ -51,7 +49,7 @@ func TestGetAccount(t *testing.T) {
 
                                 account := model.Account{}
                                 json.Unmarshal(resp.Body.Bytes(), &account)
-                                So(account.Id, ShouldEqual, "123")
+                                So(account.ID, ShouldEqual, "123")
                                 So(account.Name, ShouldEqual, "Person_123")
                                 So(account.Quote.Text, ShouldEqual, "May the source be with you. Always.")
                         })
@@ -95,8 +93,8 @@ func TestGetAccountNoQuote(t *testing.T) {
                 MatchParam("strength", "4").
                 Reply(500)
 
-        mockRepo := &dbclient.MockBoltClient{}
-        mockRepo.On("QueryAccount", "123").Return(model.Account{Id:"123", Name:"Person_123"}, nil)
+        mockRepo := &dbclient.MockGormClient{}
+        mockRepo.On("QueryAccount", "123").Return(model.Account{ID:"123", Name:"Person_123"}, nil)
 
         Convey("Given a HTTP request for /accounts/123", t, func() {
                 req := httptest.NewRequest("GET", "/accounts/123", nil)
@@ -110,7 +108,7 @@ func TestGetAccountNoQuote(t *testing.T) {
 
                                 account := model.Account{}
                                 json.Unmarshal(resp.Body.Bytes(), &account)
-                                So(account.Id, ShouldEqual, "123")
+                                So(account.ID, ShouldEqual, "123")
                                 So(account.Name, ShouldEqual, "Person_123")
                                 So(account.Quote, ShouldBeZeroValue)
                         })
@@ -120,7 +118,14 @@ func TestGetAccountNoQuote(t *testing.T) {
 
 func TestNotificationIsSentForVIPAccount(t *testing.T) {
 
-        mockRepo.On("QueryAccount", "10000").Return(model.Account{Id:"10000", Name:"Person_10000"}, nil)
+        defer gock.Off()
+        gock.New("http://quotes-service:8080").
+                Get("/api/quote").
+                MatchParam("strength", "4").
+                Reply(200).
+                BodyString(`{"quote":"May the source be with you. Always.","ipAddress":"10.0.0.5:8080","language":"en"}`)
+
+        mockRepo.On("QueryAccount", "10000").Return(model.Account{ID:"10000", Name:"Person_10000"}, nil)
         DBClient = mockRepo
 
         mockMessagingClient.On("PublishOnQueue", anyByteArray, anyString).Return(nil)

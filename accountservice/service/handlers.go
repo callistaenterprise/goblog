@@ -15,7 +15,8 @@ import (
         "fmt"
 )
 
-var DBClient dbclient.IBoltClient
+// var DBClient dbclient.IBoltClient
+var DBClient dbclient.IGormClient
 var MessagingClient messaging.IMessagingClient
 var isHealthy = true
 
@@ -58,11 +59,11 @@ func GetAccount(w http.ResponseWriter, r *http.Request) {
 
 // If our hard-coded "VIP" account, spawn a goroutine to send a message.
 func notifyVIP(account model.Account) {
-        if account.Id == "10000" {
+        if account.ID == "10000" {
                 go func(account model.Account) {
-                        vipNotification := model.VipNotification{AccountId: account.Id, ReadAt: time.Now().UTC().String()}
+                        vipNotification := model.VipNotification{AccountId: account.ID, ReadAt: time.Now().UTC().String()}
                         data, _ := json.Marshal(vipNotification)
-                        fmt.Printf("Notifying VIP account %v\n", account.Id)
+                        logrus.Printf("Notifying VIP account %v\n", account.ID)
                         err := MessagingClient.PublishOnQueue(data, "vip_queue")
                         if err != nil {
                                 logrus.Errorln(err.Error())
@@ -74,7 +75,6 @@ func notifyVIP(account model.Account) {
 func getQuote() (model.Quote, error) {
         req, _ := http.NewRequest("GET", "http://quotes-service:8080/api/quote?strength=4", nil)
         resp, err := client.Do(req)
-
         if err == nil && resp.StatusCode == 200 {
                 quote := model.Quote{}
                 bytes, _ := ioutil.ReadAll(resp.Body)
