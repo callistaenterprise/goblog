@@ -36,6 +36,7 @@ func main() {
 			fmt.Errorf("Problem reading UDP message into buffer: %v", err.Error())
 			continue
 		}
+		fmt.Println(string(buf[0:n]))
 		json.Unmarshal(buf[0:n], &item)
 		processLogStatement(item, bulkQueue)
 		item = nil
@@ -45,7 +46,7 @@ func main() {
 func processLogStatement(item map[string]interface{}, bulkQueue chan []byte) {
 	// Extract the short_message, print and parse it:
 	shortMessageString := item["short_message"].(string)
-	fmt.Println(shortMessageString)
+	//fmt.Println(shortMessageString)
 
 	var shortMessage map[string]interface{}
 	err := json.Unmarshal([]byte(shortMessageString), &shortMessage)
@@ -76,7 +77,7 @@ func startCollector(bulkQueue chan []byte) {
 			sendBulk(*buf)
 			buf.Reset()
 		} else {
-			fmt.Printf("Buffer size not large enough yet (%v), waiting for more data.\n", size)
+			//fmt.Printf("Buffer size not large enough yet (%v), waiting for more data.\n", size)
 		}
 	}
 }
@@ -96,7 +97,7 @@ func sendBulk(buffer bytes.Buffer) {
 		fmt.Println("Error sending bulk: " + err.Error())
                 return
 	}
-	fmt.Printf("Successfully sent batch of %v bytes to Loggly\n", buffer.Len())
+	// fmt.Printf("Successfully sent batch of %v bytes to Loggly\n", buffer.Len())
 }
 
 func checkError(err error) {

@@ -7,6 +7,7 @@ import (
         "strconv"
         "fmt"
         "github.com/stretchr/testify/mock"
+        "github.com/Sirupsen/logrus"
 )
 
 type IGormClient interface {
@@ -46,6 +47,7 @@ func (gc *GormClient) SetupDB(addr string)  {
         var err error
         gc.crDB, err = gorm.Open("postgres", addr)
         if err != nil {
+                logrus.Error("Error connecting to CockroachDB: %v", err.Error())
                 panic("failed to connect database: " + err.Error())
         }
 

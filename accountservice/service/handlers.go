@@ -73,14 +73,18 @@ func notifyVIP(account model.Account) {
 }
 
 func getQuote() (model.Quote, error) {
+        logrus.Info("Getting quote...")
         req, _ := http.NewRequest("GET", "http://quotes-service:8080/api/quote?strength=4", nil)
         resp, err := client.Do(req)
+
         if err == nil && resp.StatusCode == 200 {
+                logrus.Info("Got quote...")
                 quote := model.Quote{}
                 bytes, _ := ioutil.ReadAll(resp.Body)
                 json.Unmarshal(bytes, &quote)
                 return quote, nil
         } else {
+                logrus.Error("Got error getting quote...")
                 return model.Quote{}, fmt.Errorf("Some error")
         }
 }

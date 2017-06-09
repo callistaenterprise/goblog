@@ -1,0 +1,100 @@
+server:
+  port: 8765
+  ssl:
+    key-store: classpath:server.jks
+    key-store-password: password
+    key-password: password
+
+management:
+  security:
+    enabled: false
+
+info:
+  component: Edge Server
+
+#spring:
+#  oauth2:
+#    resource:
+#      userInfoUri: https://192.168.99.100:9999/uaa/user
+security:
+  # Disable Spring Boot basic authentication
+  basic:
+    enabled: false
+
+hystrix:
+  threadpool:
+    default:
+      # Maximum number of concurrent requests when using thread pools (Default: 10)
+      coreSize: 100
+      # Maximum LinkedBlockingQueue size - -1 for using SynchronousQueue (Default: -1)
+      maxQueueSize: -1
+      # Queue size rejection threshold (Default: 5)
+      queueSizeRejectionThreshold: 5
+  command:
+    default:
+      circuitBreaker:
+        sleepWindowInMilliseconds: 30000
+        requestVolumeThreshold: 20
+      execution:
+        isolation:
+#          strategy: SEMAPHORE, no thread pool but timeout handling stops to work
+          strategy: THREAD
+          thread:
+            timeoutInMilliseconds: 10000
+
+eureka:
+  client:
+    enabled: false
+
+endpoints:
+  restart:
+    enabled: true
+  shutdown:
+    enabled: true
+  health:
+    sensitive: false
+
+zuul:
+  ignoredServices: "*"
+  prefix: /api
+  routes:
+#    securedaccountservice:
+#      path: /secured/account/**
+#      url:  http://securityservice:6666/account
+    accountservice:
+      path: /accounts/**
+      url:  http://accountservice:6767/accounts
+    accountservicehealth:
+          path: /accounts/health
+          url:  http://accountservice:6767/health
+#    compservice:
+#      path: /account/**
+#      url: http://compservice:6565/account
+#    compservicehealth:
+#          path: /health/**
+#          url: http://compservice:6565/health
+
+logging:
+  level:
+    ROOT: DEBUG
+    se.callista: INFO
+
+    # Get info regarding connection to the cofig server and retries if required
+    org.springframework.cloud.config.client.ConfigServicePropertySourceLocator: INFO
+    org.springframework.retry.support.RetryTemplate: DEBUG
+
+    # Set INFO to see the allocated port
+    org.springframework.boot.context.embedded.tomcat.TomcatEmbeddedServletContainer: INFO
+    org.springframework.boot.context.embedded.undertow.UndertowEmbeddedServletContainer: INFO
+
+    # Set DEBUG level on Hystrix to get an error message when a fallback method is used.
+    com.netflix.hystrix: DEBUG
+    com.netflix.hystrix.strategy.properties.HystrixPropertiesChainedArchaiusProperty: WARN
+---
+# For deployment in Docker containers
+spring:
+  profiles: docker
+
+eureka:
+  client:
+    enabled: false
