@@ -23,12 +23,21 @@ func LoadConfigurationFromBranch(configServerUrl string, appName string, profile
 }
 
 func fetchConfiguration(url string) ([]byte, error) {
+        defer func() {
+                if r := recover(); r != nil {
+                        fmt.Println("Recovered in f", r)
+                }
+        }()
+        fmt.Printf("Getting config from %v\n", url)
         resp, err := http.Get(url)
-        if err != nil {
+        if err != nil || resp.StatusCode != 200 {
                 logrus.Errorf("Couldn't load configuration, cannot start. Terminating. Error: %v", err.Error())
                 panic("Couldn't load configuration, cannot start. Terminating. Error: " + err.Error())
         }
         body, err := ioutil.ReadAll(resp.Body)
+        if err != nil {
+                panic("Error reading configuration: " + err.Error())
+        }
         return body, err
 }
 

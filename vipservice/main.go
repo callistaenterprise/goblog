@@ -25,9 +25,10 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"github.com/Sirupsen/logrus"
-	"github.com/callistaenterprise/goblog/vipservice/config"
-	"github.com/callistaenterprise/goblog/vipservice/messaging"
+	"github.com/callistaenterprise/goblog/common/config"
+	"github.com/callistaenterprise/goblog/common/messaging"
 	"github.com/callistaenterprise/goblog/vipservice/service"
 	"github.com/spf13/viper"
 	"github.com/streadway/amqp"
@@ -38,7 +39,7 @@ import (
 
 var appName = "vipservice"
 
-var consumer messaging.IMessagingConsumer
+var messagingClient messaging.IMessagingClient
 
 func init() {
 	configServerUrl := flag.String("configServerUrl", "http://configserver:8888", "Address to config server")
@@ -58,17 +59,12 @@ func main() {
 	config.LoadConfigurationFromBranch(viper.GetString("configServerUrl"), appName, viper.GetString("profile"), viper.GetString("configBranch"))
 	initializeMessaging()
 
-	// Call the subscribe method with queue name and callback function
-	go consumer.Subscribe("vipQueue", onMessage)
-
 	// Makes sure connection is closed when service exits.
 	handleSigterm(func() {
-		if consumer != nil {
-			consumer.Close()
+		if messagingClient != nil {
+			messagingClient.Close()
 		}
 	})
-	go config.StartListener(appName, viper.GetString("amqp_server_url"), viper.GetString("config_event_bus"))
-
 	service.StartWebServer(viper.GetString("server_port"))
 }
 
@@ -80,8 +76,15 @@ func initializeMessaging() {
 	if !viper.IsSet("amqp_server_url") {
 		panic("No 'broker_url' set in configuration, cannot start")
 	}
-	consumer = &messaging.MessagingConsumer{}
-	consumer.ConnectToBroker(viper.GetString("amqp_server_url"))
+	messagingClient = &messaging.MessagingClient{}
+	messagingClient.ConnectToBroker(viper.GetString("amqp_server_url"))
+
+	// Call the subscribe method with queue name and callback function
+	err := messagingClient.SubscribeToQueue("vip_queue", appName, onMessage)
+	failOnError(err, "Could not start subscribe to vip_queue")
+
+	err = messagingClient.Subscribe(viper.GetString("config_event_bus"), "topic", appName, config.HandleRefreshEvent)
+	failOnError(err, "Could not start subscribe to "+viper.GetString("config_event_bus")+" topic")
 }
 
 // Handles Ctrl+C or most other means of "controlled" shutdown gracefully. Invokes the supplied func before exiting.
@@ -94,4 +97,11 @@ func handleSigterm(handleExit func()) {
 		handleExit()
 		os.Exit(1)
 	}()
+}
+
+func failOnError(err error, msg string) {
+	if err != nil {
+		logrus.Errorf("%s: %s", msg, err)
+		panic(fmt.Sprintf("%s: %s", msg, err))
+	}
 }

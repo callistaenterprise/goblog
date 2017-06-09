@@ -8,14 +8,20 @@ import (
         "github.com/callistaenterprise/goblog/accountservice/model"
         "fmt"
         "encoding/json"
-        "github.com/callistaenterprise/goblog/accountservice/messaging"
+        "github.com/callistaenterprise/goblog/common/messaging"
+        "gopkg.in/h2non/gock.v1"
         "github.com/stretchr/testify/mock"
         "time"
-        "gopkg.in/h2non/gock.v1"
 )
 
+// mocks for boltdb and messsaging
 var mockRepo = &dbclient.MockBoltClient{}
 var mockMessagingClient = &messaging.MockMessagingClient{}
+
+// mock types
+var anyString = mock.AnythingOfType("string")
+var anyByteArray = mock.AnythingOfType("[]uint8")
+
 func init() {
         gock.InterceptClient(client)
 }
@@ -29,7 +35,7 @@ func TestGetAccount(t *testing.T) {
                 BodyString(`{"quote":"May the source be with you. Always.","ipAddress":"10.0.0.5:8080","language":"en"}`)
 
         
-         mockRepo.On("QueryAccount", "123").Return(model.Account{Id:"123", Name:"Person_123"}, nil)
+        mockRepo.On("QueryAccount", "123").Return(model.Account{Id:"123", Name:"Person_123"}, nil)
         mockRepo.On("QueryAccount", "456").Return(model.Account{}, fmt.Errorf("Some error"))
         DBClient = mockRepo
 
@@ -117,7 +123,7 @@ func TestNotificationIsSentForVIPAccount(t *testing.T) {
         mockRepo.On("QueryAccount", "10000").Return(model.Account{Id:"10000", Name:"Person_10000"}, nil)
         DBClient = mockRepo
 
-        mockMessagingClient.On("SendMessage", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+        mockMessagingClient.On("PublishOnQueue", anyByteArray, anyString).Return(nil)
         MessagingClient = mockMessagingClient
 
         Convey("Given a HTTP req for a VIP account", t, func() {
@@ -128,7 +134,7 @@ func TestNotificationIsSentForVIPAccount(t *testing.T) {
                         Convey("Then the response should be a 200 and the MessageClient should have been invoked", func() {
                                 So(resp.Code, ShouldEqual, 200)
                                 time.Sleep(time.Millisecond * 10)    // Sleep since the Assert below occurs in goroutine
-                                So(mockMessagingClient.AssertNumberOfCalls(t, "SendMessage", 1), ShouldBeTrue)
+                                So(mockMessagingClient.AssertNumberOfCalls(t, "PublishOnQueue", 1), ShouldBeTrue)
                         })
         })})
 }
