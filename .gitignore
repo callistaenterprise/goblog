@@ -39,5 +39,14 @@ imageservice/imageservice-linux-amd64
 imageservice/healthchecker-linux-amd64
 imageservice/imageservice
 
+gelftail/gelftail
+gelftail/gelftail-linux-amd64
+
+quotes-service/healthchecker-linux-amd64
+
 build
 .gradle
+gradle
+gradlew
+gradlew.bat
+app.jar
