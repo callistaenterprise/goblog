@@ -37,7 +37,11 @@ encrypt:
     password: letmein
     alias: goblogkey
     secret: changeme
-    
+
+#netflix:
+#  atlas:
+#    uri: http://atlas:7101
+
 eureka:
   client:
     enabled: false

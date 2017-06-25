@@ -1,14 +1,14 @@
 package main
 
 import (
-	"bytes"
 	"flag"
-	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/callistaenterprise/goblog/accountservice/dbclient"
 	"github.com/callistaenterprise/goblog/accountservice/service"
+	cb "github.com/callistaenterprise/goblog/common/circuitbreaker"
 	"github.com/callistaenterprise/goblog/common/config"
 	"github.com/callistaenterprise/goblog/common/messaging"
+	"github.com/callistaenterprise/goblog/common/tracing"
 	"github.com/spf13/viper"
 	"os"
 	"os/signal"
@@ -17,20 +17,6 @@ import (
 
 var appName = "accountservice"
 
-type PlainFormatter struct {
-}
-
-func (f PlainFormatter) Format(e *logrus.Entry) ([]byte, error) {
-	var b *bytes.Buffer
-	if e.Buffer != nil {
-		b = e.Buffer
-	} else {
-		b = &bytes.Buffer{}
-	}
-	fmt.Fprintf(b, "%s", e.Message)
-	b.WriteByte('\n')
-	return b.Bytes(), nil
-}
 func init() {
 	profile := flag.String("profile", "test", "Environment profile, something similar to spring profiles")
 	configServerUrl := flag.String("configServerUrl", "http://configserver:8888", "Address to config server")
@@ -43,29 +29,26 @@ func init() {
 	viper.Set("configBranch", *configBranch)
 }
 
-func initLogger() {
-	if viper.GetString("profile") != "dev" {
-		//logrus.SetFormatter(&PlainFormatter{})
-	}
-}
-
 func main() {
 	logrus.SetFormatter(&logrus.JSONFormatter{})
+        logrus.SetLevel(logrus.DebugLevel)
 	logrus.Info("Starting %v\n", appName)
-	initLogger()
+
 	config.LoadConfigurationFromBranch(
 		viper.GetString("configServerUrl"),
 		appName,
 		viper.GetString("profile"),
 		viper.GetString("configBranch"))
-	//initializeBoltClient()
+
+	tracing.InitTracing(viper.GetString("zipkin_server_url"), appName)
 
 	service.DBClient = &dbclient.GormClient{}
 	service.DBClient.SetupDB(viper.GetString("cockroachdb_conn_url"))
-	service.DBClient.SeedAccounts()
+	// service.DBClient.SeedAccounts()
 	defer service.DBClient.Close()
 
 	initializeMessaging()
+	cb.ConfigureHystrix([]string{"imageservice", "quotes-service"}, service.MessagingClient)
 	handleSigterm(func() {
 		service.MessagingClient.Close()
 	})

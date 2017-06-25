@@ -35,5 +35,9 @@ vipservice/vipservice-linux-amd64
 vipservice/healthchecker-linux-amd64
 vipservice/vipservice
 
+imageservice/imageservice-linux-amd64
+imageservice/healthchecker-linux-amd64
+imageservice/imageservice
+
 build
 .gradle

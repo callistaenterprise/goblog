@@ -1,0 +1,88 @@
+server:
+  port: 8989
+
+management:
+  port: 8990
+
+info:
+  component: Turbine
+
+PREFIX:
+  
+endpoints:
+  restart:
+    enabled: true
+  shutdown:
+    enabled: true
+
+logging:
+  level:
+    root: WARN
+    com.netflix.discovery: 'OFF'
+
+    # Get info regarding connection to the cofig server and retries if required
+    org.springframework.cloud.config.client.ConfigServicePropertySourceLocator: INFO
+    org.springframework.retry.support.RetryTemplate: DEBUG
+
+    # org.springframework.integration: DEBUG
+
+    # Set INFO to see the allocated port
+    org.springframework.boot.context.embedded.tomcat.TomcatEmbeddedServletContainer: INFO
+    org.springframework.boot.context.embedded.undertow.UndertowEmbeddedServletContainer: INFO
+
+spring.rabbitmq:
+  host: localhost
+  port: 5672
+
+eureka:
+  instance:
+    leaseRenewalIntervalInSeconds: 10
+  client:
+    serviceUrl:
+      defaultZone: ${vcap.services.${PREFIX:}eureka.credentials.uri:http://user:password@localhost:8761}/eureka/
+
+#turbine:
+#  appConfig: customers,stores,productapi
+#  clusterNameExpression: 'default'
+
+#turbine:
+#  aggregator:
+#    clusterConfig: CUSTOMERS
+#  appConfig: customers
+
+---
+# For deployment in Docker containers
+spring:
+  profiles: docker
+
+spring.rabbitmq.host: rabbitmq
+
+eureka:
+  instance:
+    hostname: turbine
+  client:
+    serviceUrl:
+      defaultZone: http://discovery:8761/eureka/
+
+---
+# For deployment in Cloud Foundry
+spring:
+  profiles: cloud
+
+server:
+  port: 0 # Avoid collisions in the unknown CF djungle...
+
+management:
+  port: 0 # Avoid collisions in the unknown CF djungle...
+
+turbine:
+  amqp:
+    port: 0 # Avoid collisions in the unknown CF djungle...
+
+eureka:
+  instance:
+    hostname: ${vcap.application.uris[0]:localhost}
+    nonSecurePort: 80
+  client:
+    serviceUrl:
+      defaultZone: http://ml-public-ds-1.cfapps.io/eureka/

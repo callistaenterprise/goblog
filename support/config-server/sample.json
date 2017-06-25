@@ -1,0 +1,18 @@
+{
+  "name": "accountservice",
+  "profiles": [
+    "test"
+  ],
+  "label": "P8",
+  "version": "c9b066f28ce43f43437d26288b9d6494d9ea9ac9",
+  "propertySources": [
+    {
+      "name": "https://github.com/eriklupander/go-microservice-config.git/accountservice-test.yml",
+      "source": {
+        "server_port": 6767,
+        "server_name": "Accountservice TEST",
+        "the_password": "password"
+      }
+    }
+  ]
+}

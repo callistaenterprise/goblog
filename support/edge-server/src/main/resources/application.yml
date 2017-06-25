@@ -21,6 +21,22 @@ security:
   basic:
     enabled: false
 
+#netflix:
+#  atlas:
+#    uri: http://atlas:7101
+
+spring:
+  zipkin:
+    baseUrl: http://zipkin:9411
+  sleuth:
+    sampler:
+      percentage: 1.0
+    
+sample:
+  zipkin:
+    # When enabled=false, traces log to the console. Comment to send to zipkin
+    enabled: true
+
 hystrix:
   threadpool:
     default:
@@ -65,14 +81,8 @@ zuul:
       path: /accounts/**
       url:  http://accountservice:6767/accounts
     accountservicehealth:
-          path: /accounts/health
-          url:  http://accountservice:6767/health
-#    compservice:
-#      path: /account/**
-#      url: http://compservice:6565/account
-#    compservicehealth:
-#          path: /health/**
-#          url: http://compservice:6565/health
+      path: /accounts/health
+      url:  http://accountservice:6767/health
 
 logging:
   level:

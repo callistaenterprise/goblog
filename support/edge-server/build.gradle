@@ -42,6 +42,9 @@ dependencies {
      compile('org.springframework.cloud:spring-cloud-starter-zuul')
      compile('org.springframework.cloud:spring-cloud-starter-eureka')
      compile('org.springframework.cloud:spring-cloud-starter-sleuth')
+     compile('org.springframework.cloud:spring-cloud-starter-zipkin')
+
+    // compile('org.springframework.cloud:spring-cloud-starter-spectator')
 
     // compile("org.springframework.cloud:spring-cloud-starter-oauth2")
     // compile("org.springframework.cloud:spring-cloud-starter-security")

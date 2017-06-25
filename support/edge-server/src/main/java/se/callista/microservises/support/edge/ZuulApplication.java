@@ -31,4 +31,9 @@ public class ZuulApplication {
 
         LOG.info("Edge-server, build no. {} started HEJ HEJ HEJ", buildNo);
     }
+
+//    @Bean
+//    public Sampler defaultSampler() {
+//        return new AlwaysSampler();
+//    }
 }

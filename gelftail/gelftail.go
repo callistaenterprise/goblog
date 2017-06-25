@@ -38,31 +38,42 @@ func main() {
 		}
 		fmt.Println(string(buf[0:n]))
 		json.Unmarshal(buf[0:n], &item)
-		processLogStatement(item, bulkQueue)
+		err = processLogStatement(item, bulkQueue)
+		if err != nil {
+			fmt.Printf("Problem parsing message: %v", string(buf[0:n]))
+		}
 		item = nil
 	}
 }
 
-func processLogStatement(item map[string]interface{}, bulkQueue chan []byte) {
+func processLogStatement(item map[string]interface{}, bulkQueue chan []byte) error {
 	// Extract the short_message, print and parse it:
-	shortMessageString := item["short_message"].(string)
-	//fmt.Println(shortMessageString)
+	if item["short_message"] != nil {
+		shortMessageString := item["short_message"].(string)
+		var shortMessage map[string]interface{}
+		err := json.Unmarshal([]byte(shortMessageString), &shortMessage)
+		if err != nil {
+			fmt.Printf("Error parsing short_message: %v\n", err.Error())
+			return fmt.Errorf("Error parsing short_message.")
+		}
 
-	var shortMessage map[string]interface{}
-	err := json.Unmarshal([]byte(shortMessageString), &shortMessage)
-	if err != nil {
-		fmt.Printf("Error parsing short_message: %v\n", err.Error())
+		// Add the level and msg fields to the "main" one. Remove short_message
+		if shortMessage != nil {
+			item["msg"] = shortMessage["msg"].(string)
+			item["level"] = shortMessage["level"].(string)
+			delete(item, "short_message")
+		} else {
+			fmt.Println("Found log item with unparsable short_message: " + shortMessageString)
+			return fmt.Errorf("Found log item with unparsable short_message.")
+		}
+
+		finalMessage, err := json.Marshal(item)
+		bulkQueue <- finalMessage
+		return nil
+	} else {
+
+		return fmt.Errorf("Could not process log statement.")
 	}
-
-	// Add the level and msg fields to the "main" one. Remove short_message
-	if shortMessage != nil {
-		item["msg"] = shortMessage["msg"].(string)
-		item["level"] = shortMessage["level"].(string)
-		delete(item, "short_message")
-	}
-
-	finalMessage, err := json.Marshal(item)
-	bulkQueue <- finalMessage
 }
 
 func startCollector(bulkQueue chan []byte) {

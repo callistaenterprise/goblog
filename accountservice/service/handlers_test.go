@@ -12,6 +12,8 @@ import (
         "gopkg.in/h2non/gock.v1"
         "github.com/stretchr/testify/mock"
         "time"
+        "github.com/callistaenterprise/goblog/common/tracing"
+        zipkin "github.com/openzipkin/zipkin-go-opentracing"
 )
 
 var mockRepo = &dbclient.MockGormClient{}
@@ -23,6 +25,8 @@ var anyByteArray = mock.AnythingOfType("[]uint8")
 
 func init() {
         gock.InterceptClient(client)
+        tracing.Tracer, _ = zipkin.NewTracer(
+                zipkin.NewRecorder(zipkin.NopCollector{}, false, "127.0.0.1:0", "accountservice"))
 }
 
 func TestGetAccount(t *testing.T) {

@@ -6,6 +6,7 @@ type Account struct {
         ServedBy string `json:"servedBy"`
         Quote Quote `json:"quote" gorm:"ForeignKey:QuoteID"`
         QuoteID string      `json:"-"`
+        ImageUrl string  `json:"imageUrl"`
 }
 
 type Quote struct {
