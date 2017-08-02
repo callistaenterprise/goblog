@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"flag"
-	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/callistaenterprise/goblog/accountservice/dbclient"
 	"github.com/callistaenterprise/goblog/accountservice/service"
@@ -17,20 +15,6 @@ import (
 
 var appName = "accountservice"
 
-type PlainFormatter struct {
-}
-
-func (f PlainFormatter) Format(e *logrus.Entry) ([]byte, error) {
-	var b *bytes.Buffer
-	if e.Buffer != nil {
-		b = e.Buffer
-	} else {
-		b = &bytes.Buffer{}
-	}
-	fmt.Fprintf(b, "%s", e.Message)
-	b.WriteByte('\n')
-	return b.Bytes(), nil
-}
 func init() {
 	profile := flag.String("profile", "test", "Environment profile, something similar to spring profiles")
 	configServerUrl := flag.String("configServerUrl", "http://configserver:8888", "Address to config server")
@@ -43,16 +27,10 @@ func init() {
 	viper.Set("configBranch", *configBranch)
 }
 
-func initLogger() {
-	if viper.GetString("profile") != "dev" {
-		//logrus.SetFormatter(&PlainFormatter{})
-	}
-}
-
 func main() {
 	logrus.SetFormatter(&logrus.JSONFormatter{})
-	logrus.Info("Starting %v\n", appName)
-	initLogger()
+	logrus.Infof("Starting %v\n", appName)
+
 	config.LoadConfigurationFromBranch(
 		viper.GetString("configServerUrl"),
 		appName,

@@ -1,107 +1,89 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"flag"
-	"fmt"
+	"github.com/Sirupsen/logrus"
+	"github.com/callistaenterprise/goblog/gelftail/aggregator"
+	"github.com/callistaenterprise/goblog/gelftail/transformer"
+	"io/ioutil"
 	"net"
-	"net/http"
 	"os"
+	"sync"
 )
 
-var authToken = "13fed9fe-a64b-425c-8233-ebcc8bc79f57"
+var authToken = ""
+var port *string
+
+func init() {
+	data, err := ioutil.ReadFile("token.txt")
+	if err != nil {
+		msg := "Cannot find token.txt that should contain our Loggly token"
+		logrus.Errorln(msg)
+		panic(msg)
+	}
+	authToken = string(data)
+
+	port = flag.String("port", "12202", "UDP port for the gelftail")
+	flag.Parse()
+}
 
 func main() {
+	logrus.Println("Starting Gelf-tail server...")
 
-	fmt.Println("Starting Gelf-tail server")
-	port := flag.String("port", "12202", "UDP port for the gelftail")
-	flag.Parse()
+	ServerConn := startUDPServer(*port) // Remember to dereference the pointer for our "port" flag
+	defer ServerConn.Close()
 
-	ServerAddr, err := net.ResolveUDPAddr("udp", ":"+*port)
+	var bulkQueue = make(chan []byte, 1) // Buffered channel to put log statements ready for LaaS upload into
+
+	go aggregator.Start(bulkQueue, authToken)        // Start goroutine that'll collect and then upload batches of log statements
+	go listenForLogStatements(ServerConn, bulkQueue) // Start listening for UDP traffic
+
+	logrus.Infoln("Started Gelf-tail server")
+	// Block indefinitely
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	wg.Wait()
+}
+
+func startUDPServer(port string) *net.UDPConn {
+	ServerAddr, err := net.ResolveUDPAddr("udp", ":"+port)
 	checkError(err)
 
 	ServerConn, err := net.ListenUDP("udp", ServerAddr)
 	checkError(err)
-	defer ServerConn.Close()
 
-	var bulkQueue = make(chan []byte, 1)
-	go startCollector(bulkQueue)
+	return ServerConn
+}
 
+func checkError(err error) {
+	if err != nil {
+		logrus.Println("Error: ", err)
+		os.Exit(0)
+	}
+}
+
+func listenForLogStatements(ServerConn *net.UDPConn, bulkQueue chan []byte) {
 	buf := make([]byte, 8192)
 	var item map[string]interface{}
 	for {
 		n, _, err := ServerConn.ReadFromUDP(buf)
 		if err != nil {
-			fmt.Errorf("Problem reading UDP message into buffer: %v", err.Error())
+			logrus.Errorln("Problem reading UDP message into buffer: %v\n", err.Error())
 			continue
 		}
-		json.Unmarshal(buf[0:n], &item)
-		processLogStatement(item, bulkQueue)
-		item = nil
-	}
-}
 
-func processLogStatement(item map[string]interface{}, bulkQueue chan []byte) {
-	// Extract the short_message, print and parse it:
-	shortMessageString := item["short_message"].(string)
-	fmt.Println(shortMessageString)
-
-	var shortMessage map[string]interface{}
-	err := json.Unmarshal([]byte(shortMessageString), &shortMessage)
-	if err != nil {
-		fmt.Printf("Error parsing short_message: %v\n", err.Error())
-	}
-
-	// Add the level and msg fields to the "main" one. Remove short_message
-	if shortMessage != nil {
-		item["msg"] = shortMessage["msg"].(string)
-		item["level"] = shortMessage["level"].(string)
-		delete(item, "short_message")
-	}
-
-	finalMessage, err := json.Marshal(item)
-	bulkQueue <- finalMessage
-}
-
-func startCollector(bulkQueue chan []byte) {
-	buf := new(bytes.Buffer)
-	for {
-		msg := <-bulkQueue
-		buf.Write(msg)
-		buf.WriteString("\n")
-
-		size := buf.Len()
-		if size > 1024 {
-			sendBulk(*buf)
-			buf.Reset()
-		} else {
-			fmt.Printf("Buffer size not large enough yet (%v), waiting for more data.\n", size)
+		err = json.Unmarshal(buf[0:n], &item)
+		if err != nil {
+			logrus.Errorln("Problem unmarshalling log message into JSON: " + err.Error())
+			continue
 		}
-	}
-}
-
-var client = &http.Client{}
-
-// //"content-type:text/plain" -d '{ "message" : "hello" }' http://logs-01.loggly.com/inputs/13fed9fe-a64b-425c-8233-ebcc8bc79f57/tag/http/
-func sendBulk(buffer bytes.Buffer) {
-	req, err := http.NewRequest("POST", "http://logs-01.loggly.com/inputs/"+authToken+"/tag/http/", bytes.NewReader(buffer.Bytes()))
-	if err != nil {
-		fmt.Println("Error creating bulk request: " + err.Error())
-	}
-	req.Header.Add("context-type", "text/plain")
-	resp, err := client.Do(req)
-
-        if err != nil || resp.StatusCode != 200 {
-		fmt.Println("Error sending bulk: " + err.Error())
-                return
-	}
-	fmt.Printf("Successfully sent batch of %v bytes to Loggly\n", buffer.Len())
-}
-
-func checkError(err error) {
-	if err != nil {
-		fmt.Println("Error: ", err)
-		os.Exit(0)
+		processedLogMessage, err := transformer.ProcessLogStatement(item)
+		if err != nil {
+			logrus.Printf("Problem parsing message: %v", string(buf[0:n]))
+		} else {
+			bulkQueue <- processedLogMessage
+		}
+		item = nil
 	}
 }

@@ -35,5 +35,10 @@ vipservice/vipservice-linux-amd64
 vipservice/healthchecker-linux-amd64
 vipservice/vipservice
 
+gelftail/gelftail
+gelftail/gelftail-linux-amd64
+
 build
 .gradle
+
+token.txt
