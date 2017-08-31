@@ -2,7 +2,6 @@ package service
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -14,6 +13,8 @@ import (
 	"github.com/callistaenterprise/goblog/common/messaging"
 	"github.com/callistaenterprise/goblog/common/util"
 	"github.com/gorilla/mux"
+	"github.com/afex/hystrix-go/hystrix"
+        "github.com/eapache/go-resiliency/retrier"
 )
 
 var DBClient dbclient.IBoltClient
@@ -23,6 +24,11 @@ var isHealthy = true
 var client = &http.Client{}
 
 var LOGGER = logrus.Logger{}
+
+var fallbackQuote = model.Quote{
+	Language:"en",
+	ServedBy: "circuit-breaker",
+	Text: "May the source be with you, always."}
 
 func init() {
 	var transport http.RoundTripper = &http.Transport{
@@ -55,6 +61,8 @@ func GetAccount(w http.ResponseWriter, r *http.Request) {
 		account.Quote = quote
 	}
 
+        account.ImageUrl, err = getImageUrl(accountId)
+
 	// If found, marshal into JSON, write headers and content
 	data, _ := json.Marshal(account)
 	writeJsonResponse(w, http.StatusOK, data)
@@ -76,17 +84,69 @@ func notifyVIP(account model.Account) {
 }
 
 func getQuote() (model.Quote, error) {
-	req, _ := http.NewRequest("GET", "http://quotes-service:8080/api/quote?strength=4", nil)
-	resp, err := client.Do(req)
+	body, err := callWithCircuitBreaker("quotes-service", "http://quotes-service:8080/api/quote?strength=4")
 
-	if err == nil && resp.StatusCode == 200 {
+	if err == nil {
 		quote := model.Quote{}
-		bytes, _ := ioutil.ReadAll(resp.Body)
-		json.Unmarshal(bytes, &quote)
+		json.Unmarshal(body, &quote)
 		return quote, nil
 	} else {
-		return model.Quote{}, fmt.Errorf("Some error")
+		logrus.Errorf("Got error getting quote: %v", err.Error())
+		return fallbackQuote, err
 	}
+}
+
+func getImageUrl(accountId string) (string, error) {
+
+	body, err := callWithCircuitBreaker("imageservice", "http://imageservice:7777/" + accountId)
+
+	if err == nil {
+		return string(body), nil
+	} else {
+		logrus.Errorf("Got error getting imageUrl: %v", err.Error())
+		return "http://path.to.placeholder", err
+	}
+}
+
+func callWithCircuitBreaker(breakerName string, url string) ([]byte, error) {
+	output := make(chan []byte, 1)
+	errors := hystrix.Go(breakerName, func() error {
+		// talk to other services
+		req, _ := http.NewRequest("GET", url, nil)
+
+                r := retrier.New(retrier.ConstantBackoff(3, 100*time.Millisecond), nil)
+                times := 0
+                err := r.Run(func() error {
+                        resp, err := client.Do(req)
+                        if err == nil {
+                                responseBody, err := ioutil.ReadAll(resp.Body)
+                                if err == nil {
+                                        output <- responseBody
+                                        return nil
+                                }
+                        }
+                        if err != nil {
+                                times++
+                                logrus.Errorf("Attempt failed. Retrier: %v", times)
+                        }
+                        return err
+                })
+
+                // For hystrix, forward the err from the retrier. It's nil if OK.
+                return err
+	}, func(err error) error {
+		logrus.Errorf("Breaker %v opened, error: %v", breakerName, err.Error())
+		return err
+	})
+
+	select {
+	case out := <-output:
+		return out, nil
+
+	case err := <-errors:
+		return nil, err
+	}
+	return nil, nil
 }
 
 func HealthCheck(w http.ResponseWriter, r *http.Request) {

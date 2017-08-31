@@ -5,6 +5,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/callistaenterprise/goblog/accountservice/dbclient"
 	"github.com/callistaenterprise/goblog/accountservice/service"
+	cb "github.com/callistaenterprise/goblog/common/circuitbreaker"
 	"github.com/callistaenterprise/goblog/common/config"
 	"github.com/callistaenterprise/goblog/common/messaging"
 	"github.com/spf13/viper"
@@ -38,6 +39,7 @@ func main() {
 		viper.GetString("configBranch"))
 	initializeBoltClient()
 	initializeMessaging()
+	cb.ConfigureHystrix([]string{"imageservice", "quotes-service"}, service.MessagingClient)
 	handleSigterm(func() {
 		service.MessagingClient.Close()
 	})
