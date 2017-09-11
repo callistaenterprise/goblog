@@ -2,7 +2,6 @@ package service
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
 	"strconv"
 	"time"
@@ -13,8 +12,7 @@ import (
 	"github.com/callistaenterprise/goblog/common/messaging"
 	"github.com/callistaenterprise/goblog/common/util"
 	"github.com/gorilla/mux"
-	"github.com/afex/hystrix-go/hystrix"
-        "github.com/eapache/go-resiliency/retrier"
+	cb "github.com/callistaenterprise/goblog/common/circuitbreaker"
 )
 
 var DBClient dbclient.IBoltClient
@@ -22,8 +20,6 @@ var MessagingClient messaging.IMessagingClient
 var isHealthy = true
 
 var client = &http.Client{}
-
-var LOGGER = logrus.Logger{}
 
 var fallbackQuote = model.Quote{
 	Language:"en",
@@ -35,7 +31,7 @@ func init() {
 		DisableKeepAlives: true,
 	}
 	client.Transport = transport
-	LOGGER.Infof("Successfully initialized transport")
+	cb.Client = *client
 }
 
 func GetAccount(w http.ResponseWriter, r *http.Request) {
@@ -55,13 +51,8 @@ func GetAccount(w http.ResponseWriter, r *http.Request) {
 
 	notifyVIP(account) // Send VIP notification concurrently.
 
-	// NEW call the quotes-service
-	quote, err := getQuote()
-	if err == nil {
-		account.Quote = quote
-	}
-
-        account.ImageUrl, err = getImageUrl(accountId)
+        account.Quote = getQuote()
+	account.ImageUrl = getImageUrl(accountId)
 
 	// If found, marshal into JSON, write headers and content
 	data, _ := json.Marshal(account)
@@ -83,70 +74,24 @@ func notifyVIP(account model.Account) {
 	}
 }
 
-func getQuote() (model.Quote, error) {
-	body, err := callWithCircuitBreaker("quotes-service", "http://quotes-service:8080/api/quote?strength=4")
-
-	if err == nil {
-		quote := model.Quote{}
+func getQuote() (model.Quote) {
+	body, err := cb.CallUsingCircuitBreaker("quotes-service", "http://quotes-service:8080/api/quote?strength=13", "GET")
+        if err == nil {
+        	quote := model.Quote{}
 		json.Unmarshal(body, &quote)
-		return quote, nil
+		return quote
 	} else {
-		logrus.Errorf("Got error getting quote: %v", err.Error())
-		return fallbackQuote, err
+		return fallbackQuote
 	}
 }
 
-func getImageUrl(accountId string) (string, error) {
-
-	body, err := callWithCircuitBreaker("imageservice", "http://imageservice:7777/" + accountId)
-
-	if err == nil {
-		return string(body), nil
+func getImageUrl(accountId string) (string) {
+        body, err := cb.CallUsingCircuitBreaker("imageservice", "http://imageservice:7777/accounts/" + accountId, "GET")
+        if err == nil {
+		return string(body)
 	} else {
-		logrus.Errorf("Got error getting imageUrl: %v", err.Error())
-		return "http://path.to.placeholder", err
+		return "http://path.to.placeholder"
 	}
-}
-
-func callWithCircuitBreaker(breakerName string, url string) ([]byte, error) {
-	output := make(chan []byte, 1)
-	errors := hystrix.Go(breakerName, func() error {
-		// talk to other services
-		req, _ := http.NewRequest("GET", url, nil)
-
-                r := retrier.New(retrier.ConstantBackoff(3, 100*time.Millisecond), nil)
-                times := 0
-                err := r.Run(func() error {
-                        resp, err := client.Do(req)
-                        if err == nil {
-                                responseBody, err := ioutil.ReadAll(resp.Body)
-                                if err == nil {
-                                        output <- responseBody
-                                        return nil
-                                }
-                        }
-                        if err != nil {
-                                times++
-                                logrus.Errorf("Attempt failed. Retrier: %v", times)
-                        }
-                        return err
-                })
-
-                // For hystrix, forward the err from the retrier. It's nil if OK.
-                return err
-	}, func(err error) error {
-		logrus.Errorf("Breaker %v opened, error: %v", breakerName, err.Error())
-		return err
-	})
-
-	select {
-	case out := <-output:
-		return out, nil
-
-	case err := <-errors:
-		return nil, err
-	}
-	return nil, nil
 }
 
 func HealthCheck(w http.ResponseWriter, r *http.Request) {

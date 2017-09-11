@@ -30,17 +30,20 @@ func init() {
 
 func main() {
 	logrus.SetFormatter(&logrus.JSONFormatter{})
-	logrus.Infof("Starting %v\n", appName)
+        logrus.Infof("Starting %v\n", appName)
 
 	config.LoadConfigurationFromBranch(
 		viper.GetString("configServerUrl"),
 		appName,
 		viper.GetString("profile"),
 		viper.GetString("configBranch"))
+
 	initializeBoltClient()
 	initializeMessaging()
 	cb.ConfigureHystrix([]string{"imageservice", "quotes-service"}, service.MessagingClient)
+
 	handleSigterm(func() {
+		cb.Deregister(service.MessagingClient)
 		service.MessagingClient.Close()
 	})
 	service.StartWebServer(viper.GetString("server_port"))

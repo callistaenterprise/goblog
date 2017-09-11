@@ -76,7 +76,7 @@ func (m *MessagingClient) Publish(body []byte, exchangeName string, exchangeType
 		amqp.Publishing{
 			Body: body, // Our JSON body as []byte
 		})
-	fmt.Printf("A message was sent: %v", body)
+	logrus.Infof("A message was sent: %v", string(body))
 	return err
 }
 
@@ -106,7 +106,7 @@ func (m *MessagingClient) PublishOnQueue(body []byte, queueName string) error {
 			ContentType: "application/json",
 			Body:        body, // Our JSON body as []byte
 		})
-	fmt.Printf("A message was sent to queue %v: %v", queueName, body)
+	logrus.Infof("A message was sent to queue %v: %v", queueName, string(body))
 	return err
 }
 
@@ -211,7 +211,7 @@ func consumeLoop(deliveries <-chan amqp.Delivery, handlerFunc func(d amqp.Delive
 
 func failOnError(err error, msg string) {
 	if err != nil {
-		fmt.Printf("%s: %s", msg, err)
+		logrus.Errorf("%s: %s", msg, err)
 		panic(fmt.Sprintf("%s: %s", msg, err))
 	}
 }

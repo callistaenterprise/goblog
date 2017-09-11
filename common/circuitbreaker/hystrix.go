@@ -45,6 +45,7 @@ func CallUsingCircuitBreaker(breakerName string, url string, method string) ([]b
                 return out, nil
 
         case err := <-errors:
+                logrus.Debugf("Got error on channel in breaker %v. Msg: %v", breakerName, err.Error())
                 return nil, err
         }
 }
@@ -121,6 +122,7 @@ func publishDiscoveryToken(amqpClient messaging.IMessagingClient) {
         bytes, _ := json.Marshal(token)
         go func() {
                 for {
+                        amqpClient.PublishOnQueue(bytes, "discovery")
                         amqpClient.PublishOnQueue(bytes, "discovery")
                         time.Sleep(time.Second * 30)
                 }
