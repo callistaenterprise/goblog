@@ -32,6 +32,7 @@ import (
 	"github.com/spf13/viper"
 	"sync"
 	"time"
+	"github.com/callistaenterprise/goblog/common/tracing"
 )
 
 var appName = "imageservice"
@@ -55,6 +56,7 @@ func main() {
 	start := time.Now().UTC()
 	config.LoadConfigurationFromBranch(viper.GetString("configServerUrl"), appName, viper.GetString("profile"), viper.GetString("configBranch"))
 	initializeMessaging()
+	initializeTracing()
 	go service.StartWebServer(viper.GetString("server_port")) // Starts HTTP service  (async)
 
 	logrus.Infof("Started %v in %v", appName, time.Now().UTC().Sub(start))
@@ -62,6 +64,9 @@ func main() {
 	wg := sync.WaitGroup{} // Use a WaitGroup to block main() exit
 	wg.Add(1)
 	wg.Wait()
+}
+func initializeTracing() {
+	tracing.InitTracing(viper.GetString("zipkin_server_url"), appName)
 }
 
 func initializeMessaging() {

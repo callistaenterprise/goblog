@@ -3,6 +3,8 @@ package service
 import (
 	"net/http"
 	"github.com/gorilla/mux"
+	"github.com/callistaenterprise/goblog/common/tracing"
+	"context"
 )
 
 /**
@@ -20,7 +22,16 @@ func NewRouter() *mux.Router {
 			Methods(route.Method).
 			Path(route.Pattern).
 			Name(route.Name).
-			Handler(handler)
+			Handler(loadTracing(handler))
 	}
 	return router
+}
+
+func loadTracing(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		span := tracing.StartHTTPTrace(req, "imageservice")
+		defer span.Finish()
+		ctx := context.WithValue(req.Context(), "opentracing-span", span)
+		next.ServeHTTP(rw, req.WithContext(ctx))
+	})
 }

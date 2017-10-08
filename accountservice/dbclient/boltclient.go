@@ -5,14 +5,17 @@ import (
 	"fmt"
 	"strconv"
 
-	logrus "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/boltdb/bolt"
 	"github.com/callistaenterprise/goblog/accountservice/model"
+	"context"
+	"github.com/callistaenterprise/goblog/common/tracing"
+	"github.com/opentracing/opentracing-go"
 )
 
 type IBoltClient interface {
 	OpenBoltDb()
-	QueryAccount(accountId string) (model.Account, error)
+	QueryAccount(ctx context.Context, accountId string) (model.Account, error)
 	Seed()
 	Check() bool
 }
@@ -30,8 +33,14 @@ func (bc *BoltClient) OpenBoltDb() {
 	}
 }
 
-func (bc *BoltClient) QueryAccount(accountId string) (model.Account, error) {
-	// Allocate an empty Account instance we'll let json.Unmarhal populate for us in a bit.
+func (bc *BoltClient) QueryAccount(ctx context.Context, accountId string) (model.Account, error) {
+
+        // Tracing code.
+        parent := ctx.Value("opentracing-span").(opentracing.Span)
+	span := tracing.Tracer.StartSpan("QueryAccount", opentracing.ChildOf(parent.Context()))
+        defer span.Finish()
+
+	// Allocate an empty Account instance we'll let json.Unmarshal populate for us in a bit.
 	account := model.Account{}
 
 	// Read an object from the bucket using boltDB.View

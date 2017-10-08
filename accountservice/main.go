@@ -8,6 +8,7 @@ import (
 	cb "github.com/callistaenterprise/goblog/common/circuitbreaker"
 	"github.com/callistaenterprise/goblog/common/config"
 	"github.com/callistaenterprise/goblog/common/messaging"
+	"github.com/callistaenterprise/goblog/common/tracing"
 	"github.com/spf13/viper"
 	"os"
 	"os/signal"
@@ -30,7 +31,7 @@ func init() {
 
 func main() {
 	logrus.SetFormatter(&logrus.JSONFormatter{})
-        logrus.Infof("Starting %v\n", appName)
+	logrus.Infof("Starting %v\n", appName)
 
 	config.LoadConfigurationFromBranch(
 		viper.GetString("configServerUrl"),
@@ -40,6 +41,7 @@ func main() {
 
 	initializeBoltClient()
 	initializeMessaging()
+	initializeTracing()
 	cb.ConfigureHystrix([]string{"imageservice", "quotes-service"}, service.MessagingClient)
 
 	handleSigterm(func() {
@@ -47,6 +49,9 @@ func main() {
 		service.MessagingClient.Close()
 	})
 	service.StartWebServer(viper.GetString("server_port"))
+}
+func initializeTracing() {
+	tracing.InitTracing(viper.GetString("zipkin_server_url"), appName)
 }
 
 func initializeMessaging() {

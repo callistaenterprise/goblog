@@ -14,6 +14,9 @@ import (
         "io/ioutil"
         "fmt"
         "log"
+        "context"
+        "github.com/callistaenterprise/goblog/common/tracing"
+        "github.com/opentracing/opentracing-go"
 )
 
 func init() {
@@ -24,13 +27,38 @@ var Client http.Client
 
 var RETRIES = 3
 
-func CallUsingCircuitBreaker(breakerName string, url string, method string) ([]byte, error) {
+func CallUsingCircuitBreaker(ctx context.Context, breakerName string, url string, method string) ([]byte, error) {
         output := make(chan []byte, 1)
         errors := hystrix.Go(breakerName, func() error {
 
                 req, _ := http.NewRequest(method, url, nil)
+                tracing.AddTracingToReq(req, ctx.Value("opentracing-span").(opentracing.Span))
                 err := callWithRetries(req, output)
 
+                return err     // For hystrix, forward the err from the retrier. It's nil if OK.
+        }, func(err error) error {
+                logrus.Errorf("In fallback function for breaker %v, error: %v", breakerName, err.Error())
+                circuit, _, _ := hystrix.GetCircuit(breakerName)
+                logrus.Errorf("Circuit state is: %v", circuit.IsOpen())
+                return err
+        })
+
+        select {
+        case out := <-output:
+                logrus.Debugf("Call in breaker %v successful", breakerName)
+                return out, nil
+
+        case err := <-errors:
+                logrus.Debugf("Got error on channel in breaker %v. Msg: %v", breakerName, err.Error())
+                return nil, err
+        }
+}
+
+func PerformHTTPRequestCircuitBreaker(ctx context.Context, breakerName string, req *http.Request) ([]byte, error) {
+        output := make(chan []byte, 1)
+        errors := hystrix.Go(breakerName, func() error {
+                tracing.AddTracingToReqFromContext(ctx, req)
+                err := callWithRetries(req, output)
                 return err     // For hystrix, forward the err from the retrier. It's nil if OK.
         }, func(err error) error {
                 logrus.Errorf("In fallback function for breaker %v, error: %v", breakerName, err.Error())

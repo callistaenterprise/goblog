@@ -5,6 +5,10 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/streadway/amqp"
+	"context"
+        "github.com/opentracing/opentracing-go"
+        "github.com/callistaenterprise/goblog/common/tracing"
+        "github.com/opentracing/opentracing-go/ext"
 )
 
 // Defines our interface for connecting and consuming messages.
@@ -12,6 +16,7 @@ type IMessagingClient interface {
 	ConnectToBroker(connectionString string)
 	Publish(msg []byte, exchangeName string, exchangeType string) error
 	PublishOnQueue(msg []byte, queueName string) error
+	PublishOnQueueWithContext(ctx context.Context, msg []byte, queueName string) error
 	Subscribe(exchangeName string, exchangeType string, consumerName string, handlerFunc func(amqp.Delivery)) error
 	SubscribeToQueue(queueName string, consumerName string, handlerFunc func(amqp.Delivery)) error
 	Close()
@@ -80,7 +85,7 @@ func (m *MessagingClient) Publish(body []byte, exchangeName string, exchangeType
 	return err
 }
 
-func (m *MessagingClient) PublishOnQueue(body []byte, queueName string) error {
+func (m *MessagingClient) PublishOnQueueWithContext(ctx context.Context, body []byte, queueName string) error {
 	if m.conn == nil {
 		panic("Tried to send message before connection was initialized. Don't do that.")
 	}
@@ -102,12 +107,34 @@ func (m *MessagingClient) PublishOnQueue(body []byte, queueName string) error {
 		queue.Name, // routing key
 		false,      // mandatory
 		false,      // immediate
-		amqp.Publishing{
-			ContentType: "application/json",
-			Body:        body, // Our JSON body as []byte
-		})
+		buildPublishing(ctx, body))
 	logrus.Infof("A message was sent to queue %v: %v", queueName, string(body))
 	return err
+}
+
+func buildPublishing(ctx context.Context, body []byte) amqp.Publishing {
+	publishing := amqp.Publishing{
+		ContentType: "application/json",
+		Body:        body, // Our JSON body as []byte
+	}
+	if ctx != nil && ctx.Value("opentracing-span") != nil {
+                span := ctx.Value("opentracing-span").(opentracing.Span)
+                span2 := tracing.Tracer.StartSpan(
+                        "messaging", ext.RPCServerOption(span.Context()))
+                defer span2.Finish()
+                var val = make(opentracing.TextMapCarrier)
+                err := tracing.Tracer.Inject(span2.Context(), opentracing.TextMap, val)
+                if err != nil {
+                        logrus.Errorf("Error injecting span context: %v", err.Error())
+                } else {
+                        publishing.Headers = tracing.CarrierToMap(val)
+                }
+	}
+	return publishing
+}
+
+func (m *MessagingClient) PublishOnQueue(body []byte, queueName string) error {
+	return m.PublishOnQueueWithContext(nil, body, queueName)
 }
 
 func (m *MessagingClient) Subscribe(exchangeName string, exchangeType string, consumerName string, handlerFunc func(amqp.Delivery)) error {

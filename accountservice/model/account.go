@@ -1,5 +1,7 @@
 package model
 
+import "strings"
+
 type Account struct {
 	Id       string `json:"id"`
 	Name     string `json:"name"`
@@ -16,4 +18,10 @@ type Quote struct {
 
 func (a *Account) ToString() string {
 	return a.Id + " " + a.Name
+}
+
+type EmailAddress string
+
+func (e EmailAddress) IsValid() bool {
+	return strings.Contains(string(e), "@")
 }
