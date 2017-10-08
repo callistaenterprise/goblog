@@ -1,0 +1,121 @@
+version: "3"
+services:
+
+  rabbitmq:
+    image: eriklupander/rabbitmq:latest
+    ports:  # 1883:1883 -p 5672:5672 -p 15672:15672
+      - "1883:1883"
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - backend
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 2
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+  configserver:
+    image: eriklupander/configserver:latest
+    ports:  # 1883:1883 -p 5672:5672 -p 15672:15672
+          - "8888:8888"
+    networks:
+      - backend
+    depends_on:
+      - rabbitmq
+    #deploy:
+    #  placement:
+    #    constraints: [node.role == manager]
+  edge-server:
+    image: eriklupander/edge-server:latest
+    ports:
+      - 8765:8765
+    networks:
+      - frontend
+      - backend
+    depends_on:
+      - redis
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 2
+      restart_policy:
+        condition: on-failure
+  zipkin:
+    image: openzipkin/zipkin:latest
+    ports:
+      - 9411:9411
+    networks:
+      - backend
+    depends_on:
+      - db
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 2
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+
+  accountservice:
+    image: eriklupander/accountservice:latest
+    networks:
+      - frontend
+      - backend
+    deploy:
+      mode: replicated
+      replicas: 1
+      labels: [APP=ACCOUNTSERVICE]
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 120s
+
+  vipservice:
+    image: eriklupander/vipservice:latest
+    networks:
+      - frontend
+      - backend
+    deploy:
+      mode: replicated
+      replicas: 1
+      labels: [APP=VIPSERVICE]
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 120s
+
+  imageservice:
+    image: eriklupander/imageservice:latest
+    networks:
+      - frontend
+      - backend
+    deploy:
+      mode: replicated
+      replicas: 1
+      labels: [APP=IMAGESERVICE]
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 120s
+
+  dvizz:
+    image: eriklupander/dvizz:latest
+    ports:
+      - "6969:6969"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+
+networks:
+  frontend:
+  backend:
+
+volumes:
+  db-data:
