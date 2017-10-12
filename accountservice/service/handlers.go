@@ -137,6 +137,7 @@ func SetHealthyState(w http.ResponseWriter, r *http.Request) {
 func writeJsonResponse(w http.ResponseWriter, status int, data []byte) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
+	w.Header().Set("Connection", "close")
 	w.WriteHeader(status)
 	w.Write(data)
 }
