@@ -28,24 +28,24 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/callistaenterprise/goblog/common/config"
 	"github.com/callistaenterprise/goblog/common/messaging"
+	"github.com/callistaenterprise/goblog/common/tracing"
 	"github.com/callistaenterprise/goblog/imageservice/service"
 	"github.com/spf13/viper"
 	"sync"
 	"time"
-	"github.com/callistaenterprise/goblog/common/tracing"
 )
 
 var appName = "imageservice"
 
 func init() {
 	profile := flag.String("profile", "test", "Environment profile, something similar to spring profiles")
-	configServerUrl := flag.String("configServerUrl", "http://configserver:8888", "Address to config server")
+	configServerURL := flag.String("configServerUrl", "http://configserver:8888", "Address to config server")
 	configBranch := flag.String("configBranch", "master", "git branch to fetch configuration from")
 
 	flag.Parse()
 
 	viper.Set("profile", *profile)
-	viper.Set("configServerUrl", *configServerUrl)
+	viper.Set("configServerUrl", *configServerURL)
 	viper.Set("configBranch", *configBranch)
 }
 

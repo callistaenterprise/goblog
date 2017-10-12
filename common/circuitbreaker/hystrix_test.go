@@ -6,6 +6,7 @@ import (
         "testing"
         "github.com/Sirupsen/logrus"
         "github.com/afex/hystrix-go/hystrix"
+        "golang.org/x/net/context"
 )
 
 func init() {
@@ -25,7 +26,7 @@ func TestCallUsingResilienceAllFails(t *testing.T) {
         Convey("Given that we've mocked 4 requests to return 500 Server Error", t, func() {
 
                 Convey("When ", func() {
-                        bytes, err := CallUsingCircuitBreaker("TEST", "http://quotes-service", "GET")
+                        bytes, err := CallUsingCircuitBreaker(context.TODO(), "TEST", "http://quotes-service", "GET")
 
                         Convey("Then", func() {
                                 So(err, ShouldNotBeNil)
@@ -47,7 +48,7 @@ func TestCallUsingResilienceLastSucceeds(t *testing.T) {
         Convey("Given a Call request", t, func() {
 
                 Convey("When", func() {
-                        bytes, err := CallUsingCircuitBreaker("TEST", "http://quotes-service", "GET")
+                        bytes, err := CallUsingCircuitBreaker(context.TODO(), "TEST", "http://quotes-service", "GET")
 
                         Convey("Then", func() {
                                 So(err, ShouldBeNil)
@@ -72,7 +73,7 @@ func TestCallHystrixOpensAfterThresholdPassed(t *testing.T) {
                 })
                 Convey("When 6 failed requests performed", func() {
                         for a := 0 ; a < 6; a++ {
-                                CallUsingCircuitBreaker("TEST", "http://quotes-service", "GET")
+                                CallUsingCircuitBreaker(context.TODO(), "TEST", "http://quotes-service", "GET")
                         }
 
                         Convey("Then make sure the circuit has been opened", func() {

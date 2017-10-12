@@ -92,6 +92,9 @@ func AddTracingToReq(req *http.Request, span opentracing.Span) {
 
 // Adds tracing information to an OUTGOING HTTP request
 func AddTracingToReqFromContext(ctx context.Context, req *http.Request) {
+        if ctx.Value("opentracing-span") ==   nil {
+                return
+        }
         carrier := opentracing.HTTPHeadersCarrier(req.Header)
         err := Tracer.Inject(
                 ctx.Value("opentracing-span").(opentracing.Span).Context(),
@@ -105,6 +108,16 @@ func AddTracingToReqFromContext(ctx context.Context, req *http.Request) {
 func StartSpanFromContext(ctx context.Context, opName string) opentracing.Span {
         span := ctx.Value("opentracing-span").(opentracing.Span)
         child := Tracer.StartSpan(opName, ext.RPCServerOption(span.Context()))
+        return child
+}
+
+// Starts a child span from span within the supplied context, if available.
+func StartChildSpanFromContext(ctx context.Context, opName string) opentracing.Span {
+        if ctx.Value("opentracing-span") == nil {
+                return Tracer.StartSpan(opName, ext.RPCServerOption(nil))
+        }
+        parent := ctx.Value("opentracing-span").(opentracing.Span)
+        child := Tracer.StartSpan(opName, opentracing.ChildOf(parent.Context()))
         return child
 }
 func StartSpanFromContextWithLogEvent(ctx context.Context, opName string, logStatement string) opentracing.Span {

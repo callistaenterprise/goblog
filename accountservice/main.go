@@ -19,13 +19,13 @@ var appName = "accountservice"
 
 func init() {
 	profile := flag.String("profile", "test", "Environment profile, something similar to spring profiles")
-	configServerUrl := flag.String("configServerUrl", "http://configserver:8888", "Address to config server")
+	configServerURL := flag.String("configServerUrl", "http://configserver:8888", "Address to config server")
 	configBranch := flag.String("configBranch", "master", "git branch to fetch configuration from")
 
 	flag.Parse()
 
 	viper.Set("profile", *profile)
-	viper.Set("configServerUrl", *configServerUrl)
+	viper.Set("configServerURL", *configServerURL)
 	viper.Set("configBranch", *configBranch)
 }
 
@@ -34,7 +34,7 @@ func main() {
 	logrus.Infof("Starting %v\n", appName)
 
 	config.LoadConfigurationFromBranch(
-		viper.GetString("configServerUrl"),
+		viper.GetString("configServerURL"),
 		appName,
 		viper.GetString("profile"),
 		viper.GetString("configBranch"))

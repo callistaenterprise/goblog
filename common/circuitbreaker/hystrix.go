@@ -16,7 +16,6 @@ import (
         "log"
         "context"
         "github.com/callistaenterprise/goblog/common/tracing"
-        "github.com/opentracing/opentracing-go"
 )
 
 func init() {
@@ -32,7 +31,7 @@ func CallUsingCircuitBreaker(ctx context.Context, breakerName string, url string
         errors := hystrix.Go(breakerName, func() error {
 
                 req, _ := http.NewRequest(method, url, nil)
-                tracing.AddTracingToReq(req, ctx.Value("opentracing-span").(opentracing.Span))
+                tracing.AddTracingToReqFromContext(ctx, req)
                 err := callWithRetries(req, output)
 
                 return err     // For hystrix, forward the err from the retrier. It's nil if OK.

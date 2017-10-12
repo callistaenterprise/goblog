@@ -6,6 +6,7 @@ import (
 	"github.com/Sirupsen/logrus"
 )
 
+// StartWebServer starts a web server at the designated port.
 func StartWebServer(port string) {
 
 	r := NewRouter()

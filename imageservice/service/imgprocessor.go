@@ -7,6 +7,7 @@ import (
         "image/jpeg"
 )
 
+// Sepia performs a sepia conversion
 func Sepia(src image.Image, buf *bytes.Buffer) error {
 
         g := gift.New(

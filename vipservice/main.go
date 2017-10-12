@@ -29,13 +29,13 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/callistaenterprise/goblog/common/config"
 	"github.com/callistaenterprise/goblog/common/messaging"
+	"github.com/callistaenterprise/goblog/common/tracing"
 	"github.com/callistaenterprise/goblog/vipservice/service"
 	"github.com/spf13/viper"
 	"github.com/streadway/amqp"
 	"os"
 	"os/signal"
 	"syscall"
-	"github.com/callistaenterprise/goblog/common/tracing"
 	"time"
 )
 
@@ -78,23 +78,23 @@ func initializeTracing() {
 func onMessage(delivery amqp.Delivery) {
 	logrus.Infof("Got a message: %v\n", string(delivery.Body))
 
-        defer tracing.StartTraceFromCarrier(delivery.Headers, "vipservice#onMessage").Finish()
+	defer tracing.StartTraceFromCarrier(delivery.Headers, "vipservice#onMessage").Finish()
 
-        // Experimental!
-        //carrier := make(opentracing.HTTPHeadersCarrier)
-        //for k, v := range delivery.Headers {
-        //        carrier.Set(k, v.(string))
-        //}
-        //
-        //clientContext, err := tracing.Tracer.Extract(opentracing.HTTPHeaders, carrier)
-        //var span opentracing.Span
-        //if err == nil {
-        //        span = tracing.Tracer.StartSpan(
-        //                "vipservice onMessage", ext.RPCServerOption(clientContext))
-        //} else {
-        //        span = tracing.Tracer.StartSpan("vipservice onMessage")
-        //}
-        time.Sleep(time.Millisecond * 10)
+	// Experimental!
+	//carrier := make(opentracing.HTTPHeadersCarrier)
+	//for k, v := range delivery.Headers {
+	//        carrier.Set(k, v.(string))
+	//}
+	//
+	//clientContext, err := tracing.Tracer.Extract(opentracing.HTTPHeaders, carrier)
+	//var span opentracing.Span
+	//if err == nil {
+	//        span = tracing.Tracer.StartSpan(
+	//                "vipservice onMessage", ext.RPCServerOption(clientContext))
+	//} else {
+	//        span = tracing.Tracer.StartSpan("vipservice onMessage")
+	//}
+	time.Sleep(time.Millisecond * 10)
 }
 
 func initializeMessaging() {
@@ -109,9 +109,9 @@ func initializeMessaging() {
 	failOnError(err, "Could not start subscribe to vip_queue")
 
 	err = messagingClient.Subscribe(viper.GetString("config_event_bus"), "topic", appName, config.HandleRefreshEvent)
-	failOnError(err, "Could not start subscribe to "+ viper.GetString("config_event_bus") +" topic")
+	failOnError(err, "Could not start subscribe to "+viper.GetString("config_event_bus")+" topic")
 
-        logrus.Infoln("Successfully initialized messaging for vipservice")
+	logrus.Infoln("Successfully initialized messaging for vipservice")
 }
 
 // Handles Ctrl+C or most other means of "controlled" shutdown gracefully. Invokes the supplied func before exiting.
