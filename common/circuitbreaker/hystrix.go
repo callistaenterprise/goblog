@@ -22,10 +22,13 @@ func init() {
         log.SetOutput(ioutil.Discard)
 }
 
+// Client to do http requests with
 var Client http.Client
 
-var RETRIES = 3
+// RETRIES is the number of retries to do in the retrier.
+const RETRIES = 3
 
+// CallUsingCircuitBreaker performs a HTTP call inside a circuit breaker.
 func CallUsingCircuitBreaker(ctx context.Context, breakerName string, url string, method string) ([]byte, error) {
         output := make(chan []byte, 1)
         errors := hystrix.Go(breakerName, func() error {
@@ -53,6 +56,7 @@ func CallUsingCircuitBreaker(ctx context.Context, breakerName string, url string
         }
 }
 
+// PerformHTTPRequestCircuitBreaker performs the supplied http.Request within a circuit breaker.
 func PerformHTTPRequestCircuitBreaker(ctx context.Context, breakerName string, req *http.Request) ([]byte, error) {
         output := make(chan []byte, 1)
         errors := hystrix.Go(breakerName, func() error {
@@ -102,6 +106,7 @@ func callWithRetries(req *http.Request, output chan []byte) error {
         return err
 }
 
+// ConfigureHystrix sets up hystrix circuit breakers.
 func ConfigureHystrix(commands []string, amqpClient messaging.IMessagingClient) {
 
         for _, command := range commands {
@@ -124,8 +129,9 @@ func ConfigureHystrix(commands []string, amqpClient messaging.IMessagingClient) 
         publishDiscoveryToken(amqpClient)
 }
 
+// Deregister publishes a Deregister token to Hystrix/Turbine
 func Deregister(amqpClient messaging.IMessagingClient) {
-        ip, err := util.ResolveIpFromHostsFile()
+        ip, err := util.ResolveIPFromHostsFile()
         if err != nil {
                 ip = util.GetIPWithPrefix("10.0.")
         }
@@ -138,7 +144,7 @@ func Deregister(amqpClient messaging.IMessagingClient) {
 }
 
 func publishDiscoveryToken(amqpClient messaging.IMessagingClient) {
-        ip, err := util.ResolveIpFromHostsFile()
+        ip, err := util.ResolveIPFromHostsFile()
         if err != nil {
                 ip = util.GetIPWithPrefix("10.0.")
         }
@@ -159,9 +165,9 @@ func publishDiscoveryToken(amqpClient messaging.IMessagingClient) {
 func resolveProperty(command string, prop string) int {
         if viper.IsSet("hystrix.command." + command + "." + prop) {
                 return viper.GetInt("hystrix.command." + command + "." + prop)
-        } else {
-                return getDefaultHystrixConfigPropertyValue(prop)
         }
+        return getDefaultHystrixConfigPropertyValue(prop)
+
 }
 func getDefaultHystrixConfigPropertyValue(prop string) int {
         switch prop {
@@ -179,6 +185,7 @@ func getDefaultHystrixConfigPropertyValue(prop string) int {
         panic("Got unknown hystrix property: " + prop + ". Panicing!")
 }
 
+// DiscoveryToken defines a struct for transmitting the state of a hystrix stream producer.
 type DiscoveryToken struct {
         State   string `json:"state"` // UP, RUNNING, DOWN ??
         Address string `json:"address"`

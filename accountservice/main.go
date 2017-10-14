@@ -59,7 +59,7 @@ func initializeMessaging() {
 		panic("No 'amqp_server_url' set in configuration, cannot start")
 	}
 
-	service.MessagingClient = &messaging.MessagingClient{}
+	service.MessagingClient = &messaging.AmqpClient{}
 	service.MessagingClient.ConnectToBroker(viper.GetString("amqp_server_url"))
 	service.MessagingClient.Subscribe(viper.GetString("config_event_bus"), "topic", appName, config.HandleRefreshEvent)
 }

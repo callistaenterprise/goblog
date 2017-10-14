@@ -44,13 +44,13 @@ var appName = "vipservice"
 var messagingClient messaging.IMessagingClient
 
 func init() {
-	configServerUrl := flag.String("configServerUrl", "http://configserver:8888", "Address to config server")
+	configServerURL := flag.String("configServerUrl", "http://configserver:8888", "Address to config server")
 	profile := flag.String("profile", "test", "Environment profile, something similar to spring profiles")
 	configBranch := flag.String("configBranch", "master", "git branch to fetch configuration from")
 	flag.Parse()
 
 	viper.Set("profile", *profile)
-	viper.Set("configServerUrl", *configServerUrl)
+	viper.Set("configServerUrl", *configServerURL)
 	viper.Set("configBranch", *configBranch)
 }
 
@@ -101,7 +101,7 @@ func initializeMessaging() {
 	if !viper.IsSet("amqp_server_url") {
 		panic("No 'broker_url' set in configuration, cannot start")
 	}
-	messagingClient = &messaging.MessagingClient{}
+	messagingClient = &messaging.AmqpClient{}
 	messagingClient.ConnectToBroker(viper.GetString("amqp_server_url"))
 
 	// Call the subscribe method with queue name and callback function

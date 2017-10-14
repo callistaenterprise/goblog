@@ -8,26 +8,28 @@ import (
         "fmt"
 )
 
-func ResolveIpFromHostsFile() (string, error) {
+// ResolveIPFromHostsFile reads the final IP address of the /etc/hosts file. Works for docker, typically at least...
+func ResolveIPFromHostsFile() (string, error) {
         data, err := ioutil.ReadFile("/etc/hosts")
         if err != nil {
                 logrus.Errorf("Problem reading /etc/hosts: %v", err.Error())
                 return "", fmt.Errorf("Problem reading /etc/hosts: " + err.Error())
-        } else {
-                lines := strings.Split(string(data), "\n")
-
-                // Get last line
-                line := lines[len(lines) - 1]
-
-                if len(line) < 2 {
-                        line = lines[len(lines) - 2]
-                }
-
-                parts := strings.Split(line, "\t")
-                return parts[0], nil;
         }
+
+        lines := strings.Split(string(data), "\n")
+
+        // Get last line
+        line := lines[len(lines) - 1]
+
+        if len(line) < 2 {
+                line = lines[len(lines) - 2]
+        }
+
+        parts := strings.Split(line, "\t")
+        return parts[0], nil;
 }
 
+// GetIP returns the first non-loopback IP address
 func GetIP() string {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
@@ -46,7 +48,7 @@ func GetIP() string {
 	//panic("Unable to determine local IP address (non loopback). Exiting.")
 }
 
-
+// GetIPWithPrefix returns the first non-loopback IP starting with the supplied prefix.
 func GetIPWithPrefix(prefix string) string {
         addrs, err := net.InterfaceAddrs()
         if err != nil {

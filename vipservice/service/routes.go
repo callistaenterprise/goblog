@@ -2,9 +2,7 @@ package service
 
 import "net/http"
 
-/**
- * Derived from http://thenewstack.io/make-a-restful-json-api-go/
- */
+// Route type, derived from http://thenewstack.io/make-a-restful-json-api-go/
 type Route struct {
 	Name        string
 	Method      string
@@ -12,6 +10,7 @@ type Route struct {
 	HandlerFunc http.HandlerFunc
 }
 
+// Routes is a type of slice of Route
 type Routes []Route
 
 var routes = Routes{
