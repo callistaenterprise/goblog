@@ -25,17 +25,36 @@ security:
 #  atlas:
 #    uri: http://atlas:7101
 
+# Disable Eureka service discovery, we're on Docker Swarm mode.
+eureka:
+  client:
+    enabled: false
+
+# Enable zipkin support, sample all requests
 spring:
   zipkin:
     baseUrl: http://zipkin:9411
   sleuth:
     sampler:
       percentage: 1.0
-    
 sample:
   zipkin:
-    # When enabled=false, traces log to the console. Comment to send to zipkin
     enabled: true
+
+zuul:
+  ignoredServices: "*"
+  prefix: /api
+  routes:
+#    securedaccountservice:
+#      path: /secured/account/**
+#      url:  http://securityservice:6666/account
+    accountservice:
+      path: /accounts/**
+      url:  http://accountservice:6767/accounts
+    accountservicehealth:
+      path: /accounts/health
+      url:  http://accountservice:6767/health
+
 
 hystrix:
   threadpool:
@@ -58,9 +77,7 @@ hystrix:
           thread:
             timeoutInMilliseconds: 10000
 
-eureka:
-  client:
-    enabled: false
+
 
 endpoints:
   restart:

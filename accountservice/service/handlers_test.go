@@ -28,7 +28,7 @@ var anyByteArray = mock.AnythingOfType("[]uint8")
 
 func init() {
         gock.InterceptClient(client)
-        tracing.Tracer = opentracing.NoopTracer{}
+        tracing.tracer = opentracing.NoopTracer{}
 }
 
 func TestGetAccount(t *testing.T) {

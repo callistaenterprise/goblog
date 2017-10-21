@@ -120,10 +120,10 @@ func buildMessage(ctx context.Context, body []byte) amqp.Publishing {
 		Body:        body, // Our JSON body as []byte
 	}
 	if ctx != nil {
-		child  := tracing.StartChildSpanFromContext(ctx, "messaging")
+		child := tracing.StartChildSpanFromContext(ctx, "messaging")
              	defer child.Finish()
                 var val = make(opentracing.TextMapCarrier)
-                err := tracing.Tracer.Inject(child.Context(), opentracing.TextMap, val)
+                err := tracing.AddTracingToTextMapCarrier(child, val)
                 if err != nil {
                         logrus.Errorf("Error injecting span context: %v", err.Error())
                 } else {

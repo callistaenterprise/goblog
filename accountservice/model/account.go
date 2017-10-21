@@ -8,7 +8,7 @@ type Account struct {
         Name     string `json:"name"`
         ServedBy string `json:"servedBy"`
         Quote    Quote  `json:"quote"`
-        ImageURL string  `json:"imageUrl"`
+        ImageData AccountImage  `json:"imageData"`
 }
 
 // Quote defines a Quote as provided by the quotes-service
@@ -18,9 +18,20 @@ type Quote struct {
 	Language string `json:"language"`
 }
 
+// AccountImage
+type AccountImage struct {
+        URL string `json:"url"`
+        ServedBy string `json:"servedBy"`
+}
+
 // ToString is a somewhat generic ToString method.
 func (a *Account) ToString() string {
 	return a.ID + " " + a.Name
+}
+
+// ToString is a somewhat generic ToString method.
+func (a *AccountImage) ToString() string {
+        return a.URL + " " + a.ServedBy
 }
 
 // EmailAddress is just a little experiment with go types.

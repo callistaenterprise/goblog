@@ -23,6 +23,7 @@ var DBClient dbclient.IBoltClient
 // MessagingClient instance
 var MessagingClient messaging.IMessagingClient
 
+var myIp string
 var isHealthy = true
 var client = &http.Client{}
 
@@ -37,6 +38,11 @@ func init() {
 	}
 	client.Transport = transport
 	cb.Client = *client
+        var err error
+        myIp, err = util.ResolveIPFromHostsFile()
+        if err != nil {
+                myIp = util.GetIP()
+        }
 }
 
 // GetAccount loads an account instance, including a quote and an image URL using sub-services.
@@ -47,7 +53,7 @@ func GetAccount(w http.ResponseWriter, r *http.Request) {
 
 	// Read the account struct BoltDB
         account, err := DBClient.QueryAccount(r.Context(), accountID)
-	account.ServedBy = util.GetIP()
+	account.ServedBy = myIp
 
 	// If err, return a 404
 	if err != nil {
@@ -59,7 +65,7 @@ func GetAccount(w http.ResponseWriter, r *http.Request) {
 	notifyVIP(r.Context(), account) // Send VIP notification concurrently.
 
         account.Quote = getQuote(r.Context())
-	account.ImageURL = getImageURL(r.Context(), accountID)
+	account.ImageData = getImageURL(r.Context(), accountID)
 
 	// If found, marshal into JSON, write headers and content
 	data, _ := json.Marshal(account)
@@ -99,16 +105,23 @@ func getQuote(ctx context.Context) (model.Quote) {
         return fallbackQuote
 }
 
-func getImageURL(ctx context.Context, accountID string) (string) {
+func getImageURL(ctx context.Context, accountID string) (model.AccountImage) {
         child := tracing.StartSpanFromContextWithLogEvent(ctx, "getImageUrl", "Client send")
         defer tracing.CloseSpan(child, "Client Receive")
 
         req, err := http.NewRequest("GET", "http://imageservice:7777/accounts/" + accountID, nil)
         body, err := cb.PerformHTTPRequestCircuitBreaker(tracing.UpdateContext(ctx, child), "imageservice", req)
         if err == nil {
-		return string(body)
+                accountImage := model.AccountImage{}
+		err := json.Unmarshal(body, &accountImage)
+                if err == nil {
+                        return accountImage
+                } else {
+                        panic("Unmarshalling accountImage struct went really bad. Msg: " + err.Error())
+                }
+
 	}
-        return "http://path.to.placeholder"
+        return model.AccountImage{URL: "http://path.to.placeholder", ServedBy: "fallback"}
 }
 
 // HealthCheck will return OK if the underlying BoltDB is healthy. At least healthy enough for demoing purposes.

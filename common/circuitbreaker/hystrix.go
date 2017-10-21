@@ -65,8 +65,6 @@ func PerformHTTPRequestCircuitBreaker(ctx context.Context, breakerName string, r
                 return err     // For hystrix, forward the err from the retrier. It's nil if OK.
         }, func(err error) error {
                 logrus.Errorf("In fallback function for breaker %v, error: %v", breakerName, err.Error())
-                circuit, _, _ := hystrix.GetCircuit(breakerName)
-                logrus.Errorf("Circuit state is: %v", circuit.IsOpen())
                 return err
         })
 

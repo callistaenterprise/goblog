@@ -11,7 +11,7 @@ import (
 )
 
 // Tracer instance
-var Tracer opentracing.Tracer
+var tracer opentracing.Tracer
 
 // InitTracing connects the calling service to Zipkin
 func InitTracing(zipkinURL string, serviceName string) {
@@ -26,7 +26,7 @@ func InitTracing(zipkinURL string, serviceName string) {
                 panic("Error connecting to zipkin server at " +
                         fmt.Sprintf("%s/api/v1/spans", zipkinURL) + ". Error: " + err.Error())
         }
-        Tracer, err = zipkin.NewTracer(
+        tracer, err = zipkin.NewTracer(
                 zipkin.NewRecorder(collector, false, "127.0.0.1:0", serviceName))
         if err != nil {
                 logrus.Errorln("Error starting new zipkin tracer. Error: " + err.Error())
@@ -38,21 +38,20 @@ func InitTracing(zipkinURL string, serviceName string) {
 // StartHTTPTrace loads tracing information from an INCOMING HTTP request.
 func StartHTTPTrace(r *http.Request, opName string) opentracing.Span {
         carrier := opentracing.HTTPHeadersCarrier(r.Header)
-        clientContext, err := Tracer.Extract(opentracing.HTTPHeaders, carrier)
-        var span opentracing.Span
+        clientContext, err := tracer.Extract(opentracing.HTTPHeaders, carrier)
         if err == nil {
-                span = Tracer.StartSpan(
+                return tracer.StartSpan(
                         opName, ext.RPCServerOption(clientContext))
         } else {
-                span = Tracer.StartSpan(opName)
+                return tracer.StartSpan(opName)
         }
-        return span
 }
 
 // MapToCarrier converts a generic map to opentracing http headers carrier
 func MapToCarrier(headers map[string]interface{}) opentracing.HTTPHeadersCarrier {
         carrier := make(opentracing.HTTPHeadersCarrier)
-        for k, v := range headers {    // delivery.Headers
+        for k, v := range headers {
+                // delivery.Headers
                 carrier.Set(k, v.(string))
         }
         return carrier
@@ -70,13 +69,13 @@ func CarrierToMap(values map[string]string) map[string]interface{} {
 // StartTraceFromCarrier extracts tracing info from a generic map and starts a new span.
 func StartTraceFromCarrier(carrier map[string]interface{}, spanName string) opentracing.Span {
 
-        clientContext, err := Tracer.Extract(opentracing.HTTPHeaders, MapToCarrier(carrier))
+        clientContext, err := tracer.Extract(opentracing.HTTPHeaders, MapToCarrier(carrier))
         var span opentracing.Span
         if err == nil {
-                span = Tracer.StartSpan(
+                span = tracer.StartSpan(
                         spanName, ext.RPCServerOption(clientContext))
         } else {
-                span = Tracer.StartSpan(spanName)
+                span = tracer.StartSpan(spanName)
         }
         return span
 }
@@ -84,7 +83,7 @@ func StartTraceFromCarrier(carrier map[string]interface{}, spanName string) open
 // AddTracingToReq adds tracing information to an OUTGOING HTTP request
 func AddTracingToReq(req *http.Request, span opentracing.Span) {
         carrier := opentracing.HTTPHeadersCarrier(req.Header)
-        err := Tracer.Inject(
+        err := tracer.Inject(
                 span.Context(),
                 opentracing.HTTPHeaders,
                 carrier)
@@ -95,11 +94,11 @@ func AddTracingToReq(req *http.Request, span opentracing.Span) {
 
 // AddTracingToReqFromContext adds tracing information to an OUTGOING HTTP request
 func AddTracingToReqFromContext(ctx context.Context, req *http.Request) {
-        if ctx.Value("opentracing-span") ==   nil {
+        if ctx.Value("opentracing-span") == nil {
                 return
         }
         carrier := opentracing.HTTPHeadersCarrier(req.Header)
-        err := Tracer.Inject(
+        err := tracer.Inject(
                 ctx.Value("opentracing-span").(opentracing.Span).Context(),
                 opentracing.HTTPHeaders,
                 carrier)
@@ -108,27 +107,31 @@ func AddTracingToReqFromContext(ctx context.Context, req *http.Request) {
         }
 }
 
+func AddTracingToTextMapCarrier(span opentracing.Span, val opentracing.TextMapCarrier) error {
+        return tracer.Inject(span.Context(), opentracing.TextMap, val)
+}
+
 // StartSpanFromContext starts a span.
 func StartSpanFromContext(ctx context.Context, opName string) opentracing.Span {
         span := ctx.Value("opentracing-span").(opentracing.Span)
-        child := Tracer.StartSpan(opName, ext.RPCServerOption(span.Context()))
+        child := tracer.StartSpan(opName, ext.RPCServerOption(span.Context()))
         return child
 }
 
 // StartChildSpanFromContext starts a child span from span within the supplied context, if available.
 func StartChildSpanFromContext(ctx context.Context, opName string) opentracing.Span {
         if ctx.Value("opentracing-span") == nil {
-                return Tracer.StartSpan(opName, ext.RPCServerOption(nil))
+                return tracer.StartSpan(opName, ext.RPCServerOption(nil))
         }
         parent := ctx.Value("opentracing-span").(opentracing.Span)
-        child := Tracer.StartSpan(opName, opentracing.ChildOf(parent.Context()))
+        child := tracer.StartSpan(opName, opentracing.ChildOf(parent.Context()))
         return child
 }
 
 // StartSpanFromContextWithLogEvent starts span from context with logevent
 func StartSpanFromContextWithLogEvent(ctx context.Context, opName string, logStatement string) opentracing.Span {
         span := ctx.Value("opentracing-span").(opentracing.Span)
-        child := Tracer.StartSpan(opName, ext.RPCServerOption(span.Context()))
+        child := tracer.StartSpan(opName, ext.RPCServerOption(span.Context()))
         child.LogEvent(logStatement)
         return child
 }
