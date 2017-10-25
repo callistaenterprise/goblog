@@ -127,6 +127,7 @@ func securedTest() {
 func standardTest() {
 	var url string
 	if zuul {
+		Log.Println("Using HTTPS through ZUUL")
 		url = "https://" + baseAddr + ":8765/api/accounts/"
 	} else {
 		url = "http://" + baseAddr + ":6767/accounts/"
@@ -137,6 +138,7 @@ func standardTest() {
 
 		var DefaultTransport http.RoundTripper = &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			DisableKeepAlives: true,
 		}
 		req, _ := http.NewRequest("GET", serviceUrl, nil)
 		resp, err := DefaultTransport.RoundTrip(req)
