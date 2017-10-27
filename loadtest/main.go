@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"github.com/Sirupsen/logrus"
 	"net/url"
+	"strings"
 )
 
 var Log = logrus.New()
@@ -132,13 +133,14 @@ func standardTest() {
 	} else {
 		url = "http://" + baseAddr + ":6767/accounts/"
 	}
+	m := make(map[string]interface{})
 	for {
 		accountId := rand.Intn(99) + 10000
 		serviceUrl := url + strconv.Itoa(accountId)
 
 		var DefaultTransport http.RoundTripper = &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-			DisableKeepAlives: true,
+			DisableKeepAlives: false,
 		}
 		req, _ := http.NewRequest("GET", serviceUrl, nil)
 		resp, err := DefaultTransport.RoundTrip(req)
@@ -147,8 +149,27 @@ func standardTest() {
 			panic(err)
 		}
 		body, _ := ioutil.ReadAll(resp.Body)
-		Log.Println(string(body))
+		json.Unmarshal(body, &m)
+		quote :=  m["quote"].(map[string]interface{})["quote"].(string)
+		quoteIp := m["quote"].(map[string]interface{})["ipAddress"].(string)
+		quoteIp = quoteIp[strings.IndexRune(quoteIp, '/') + 1 :]
+
+		imageUrl := m["imageData"].(map[string]interface{})["url"].(string)
+		imageServedBy := m["imageData"].(map[string]interface{})["servedBy"].(string)
+
+		fmt.Print("|" + m["name"].(string) + "\t|" + m["servedBy"].(string) + "\t|")
+		fmt.Print(PadRight(quote, " ", 32) + "\t|" + quoteIp + "\t|")
+		fmt.Println(PadRight(imageUrl, " ", 28) + "\t|" + imageServedBy + "\t|")
 		time.Sleep(time.Second * 1)
 	}
 
+}
+
+func PadRight(str, pad string, lenght int) string {
+	for {
+		str += pad
+		if len(str) > lenght {
+			return str[0:lenght]
+		}
+	}
 }
