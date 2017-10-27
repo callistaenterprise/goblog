@@ -1,93 +1,163 @@
 package service
 
 import (
-	"net/http"
-	"github.com/gorilla/mux"
 	"encoding/json"
+	"net/http"
 	"strconv"
-        "github.com/callistaenterprise/goblog/accountservice/dbclient"
-        "fmt"
-        "net"
-        "github.com/callistaenterprise/goblog/accountservice/messaging"
-        "github.com/callistaenterprise/goblog/accountservice/model"
-        "time"
+	"time"
+
+	"github.com/Sirupsen/logrus"
+	"github.com/callistaenterprise/goblog/accountservice/dbclient"
+	"github.com/callistaenterprise/goblog/accountservice/model"
+	"github.com/callistaenterprise/goblog/common/messaging"
+	"github.com/callistaenterprise/goblog/common/util"
+	"github.com/gorilla/mux"
+	cb "github.com/callistaenterprise/goblog/common/circuitbreaker"
+	"context"
+	"github.com/callistaenterprise/goblog/common/tracing"
 )
 
+// DBClient instance for accessing the underlying BoltDB, be it the real one or a mock.
 var DBClient dbclient.IBoltClient
+
+// MessagingClient instance
 var MessagingClient messaging.IMessagingClient
 
+var myIp string
+var isHealthy = true
+var client = &http.Client{}
+
+var fallbackQuote = model.Quote{
+	Language:"en",
+	ServedBy: "circuit-breaker",
+	Text: "May the source be with you, always."}
+
+func init() {
+	var transport http.RoundTripper = &http.Transport{
+		DisableKeepAlives: true,
+	}
+	client.Transport = transport
+	cb.Client = *client
+        var err error
+        myIp, err = util.ResolveIPFromHostsFile()
+        if err != nil {
+                myIp = util.GetIP()
+        }
+}
+
+// GetAccount loads an account instance, including a quote and an image URL using sub-services.
 func GetAccount(w http.ResponseWriter, r *http.Request) {
-   	// Read the 'accountId' path parameter from the mux map
-	var accountId = mux.Vars(r)["accountId"]
 
-        // Read the account struct BoltDB
-	account, err := DBClient.QueryAccount(accountId)
-        account.ServedBy = getIP()
+	// Read the 'accountId' path parameter from the mux map
+	var accountID = mux.Vars(r)["accountId"]
 
-        // If err, return a 404
+	// Read the account struct BoltDB
+        account, err := DBClient.QueryAccount(r.Context(), accountID)
+	account.ServedBy = myIp
+
+	// If err, return a 404
 	if err != nil {
-                fmt.Println("Some error occured serving " + accountId + ": " + err.Error())
+		logrus.Errorf("Some error occured serving " + accountID + ": " + err.Error())
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-        notifyVIP(account)   // Send VIP notification concurrently.
+	notifyVIP(r.Context(), account) // Send VIP notification concurrently.
 
-        // If found, marshal into JSON, write headers and content
+        account.Quote = getQuote(r.Context())
+	account.ImageData = getImageURL(r.Context(), accountID)
+
+	// If found, marshal into JSON, write headers and content
 	data, _ := json.Marshal(account)
-        writeJsonResponse(w, http.StatusOK, data)
+	writeJSONResponse(w, http.StatusOK, data)
 }
 
 // If our hard-coded "VIP" account, spawn a goroutine to send a message.
-func notifyVIP(account model.Account) {
-        if account.Id == "10000" {
-                go func(account model.Account) {
-                        vipNotification := model.VipNotification{AccountId: account.Id, ReadAt: time.Now().UTC().String()}
-                        data, _ := json.Marshal(vipNotification)
-                        err := MessagingClient.SendMessage(data, "application/json", "vipQueue")
-                        if err != nil {
-                                fmt.Println(err.Error())
-                        }
-                }(account)
-        }
+func notifyVIP(ctx context.Context, account model.Account) {
+	if account.ID == "10000" {
+		go func(account model.Account) {
+			vipNotification := model.VipNotification{AccountID: account.ID, ReadAt: time.Now().UTC().String()}
+			data, _ := json.Marshal(vipNotification)
+			logrus.Infof("Notifying VIP account %v\n", account.ID)
+			err := MessagingClient.PublishOnQueueWithContext(ctx, data, "vip_queue")
+			if err != nil {
+				logrus.Errorln(err.Error())
+			}
+                        tracing.LogEventToOngoingSpan(ctx, "Sent VIP message")
+		}(account)
+
+	}
 }
 
-func HealthCheck(w http.ResponseWriter, r *http.Request) {
-        // Since we're here, we already know that HTTP service is up. Let's just check the state of the boltdb connection
-        dbUp := DBClient.Check()
-        if dbUp {
-                data, _ := json.Marshal(healthCheckResponse{Status: "UP"})
-                writeJsonResponse(w, http.StatusOK, data)
-        } else {
-                data, _ := json.Marshal(healthCheckResponse{Status: "Database unaccessible"})
-                writeJsonResponse(w, http.StatusServiceUnavailable, data)
-        }
+func getQuote(ctx context.Context) (model.Quote) {
+        // Start a new opentracing child span
+        child := tracing.StartSpanFromContextWithLogEvent(ctx, "getQuote", "Client send")
+        defer tracing.CloseSpan(child, "Client Receive")
+
+        // Create the http request and pass it to the circuit breaker
+        req, err := http.NewRequest("GET", "http://quotes-service:8080/api/quote?strength=4", nil)
+	body, err := cb.PerformHTTPRequestCircuitBreaker(tracing.UpdateContext(ctx, child), "quotes-service", req)
+        if err == nil {
+        	quote := model.Quote{}
+		json.Unmarshal(body, &quote)
+		return quote
+	}
+        return fallbackQuote
 }
 
-func writeJsonResponse(w http.ResponseWriter, status int, data []byte) {
-        w.Header().Set("Content-Type", "application/json")
-        w.Header().Set("Content-Length", strconv.Itoa(len(data)))
-        w.WriteHeader(status)
-        w.Write(data)
-}
+func getImageURL(ctx context.Context, accountID string) (model.AccountImage) {
+        child := tracing.StartSpanFromContextWithLogEvent(ctx, "getImageUrl", "Client send")
+        defer tracing.CloseSpan(child, "Client Receive")
 
-func getIP() string {
-        addrs, err := net.InterfaceAddrs()
-        if err != nil {
-                return "error"
-        }
-        for _, address := range addrs {
-                // check the address type and if it is not a loopback the display it
-                if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-                        if ipnet.IP.To4() != nil {
-                                return ipnet.IP.String()
-                        }
+        req, err := http.NewRequest("GET", "http://imageservice:7777/accounts/" + accountID, nil)
+        body, err := cb.PerformHTTPRequestCircuitBreaker(tracing.UpdateContext(ctx, child), "imageservice", req)
+        if err == nil {
+                accountImage := model.AccountImage{}
+		err := json.Unmarshal(body, &accountImage)
+                if err == nil {
+                        return accountImage
+                } else {
+                        panic("Unmarshalling accountImage struct went really bad. Msg: " + err.Error())
                 }
-        }
-        panic("Unable to determine local IP address (non loopback). Exiting.")
+
+	}
+        return model.AccountImage{URL: "http://path.to.placeholder", ServedBy: "fallback"}
+}
+
+// HealthCheck will return OK if the underlying BoltDB is healthy. At least healthy enough for demoing purposes.
+func HealthCheck(w http.ResponseWriter, r *http.Request) {
+	// Since we're here, we already know that HTTP service is up. Let's just check the state of the boltdb connection
+	dbUp := DBClient.Check()
+	if dbUp && isHealthy {
+		data, _ := json.Marshal(healthCheckResponse{Status: "UP"})
+		writeJSONResponse(w, http.StatusOK, data)
+	} else {
+		data, _ := json.Marshal(healthCheckResponse{Status: "Database unaccessible"})
+		writeJSONResponse(w, http.StatusServiceUnavailable, data)
+	}
+}
+
+// SetHealthyState can be used fake health problems.
+func SetHealthyState(w http.ResponseWriter, r *http.Request) {
+	// Read the 'accountId' path parameter from the mux map
+	var state, err = strconv.ParseBool(mux.Vars(r)["state"])
+	if err != nil {
+		logrus.Errorln("Invalid request to SetHealthyState, allowed values are true or false")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	isHealthy = state
+	w.WriteHeader(http.StatusOK)
+}
+
+func writeJSONResponse(w http.ResponseWriter, status int, data []byte) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
+	w.WriteHeader(status)
+	w.Write(data)
 }
 
 type healthCheckResponse struct {
-        Status string `json:"status"`
+	Status string `json:"status"`
 }
-

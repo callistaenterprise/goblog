@@ -7,12 +7,12 @@ import scala.concurrent.duration._
 
 object Scenarios {
 
-    val rampUpTimeSecs = 10
+    val rampUpTimeSecs = 60
 
 	/*
 	 *	HTTP scenarios
-     */	
-	
+     */
+
 	// Browse
 	val browse_guids = csv("accounts.csv").circular
 	val scn_Browse = scenario("GetAccounts")

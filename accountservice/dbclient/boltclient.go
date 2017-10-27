@@ -1,38 +1,47 @@
 package dbclient
 
 import (
-        "github.com/boltdb/bolt"
-        "log"
-        "strconv"
-        "github.com/callistaenterprise/goblog/accountservice/model"
         "encoding/json"
         "fmt"
+        "strconv"
+
+        "github.com/Sirupsen/logrus"
+        "github.com/boltdb/bolt"
+        "github.com/callistaenterprise/goblog/accountservice/model"
+        "context"
+        "github.com/callistaenterprise/goblog/common/tracing"
 )
 
-
-
+// IBoltClient defines a simple little interface for interacting with a BoltDB
 type IBoltClient interface {
         OpenBoltDb()
-        QueryAccount(accountId string) (model.Account, error)
+        QueryAccount(ctx context.Context, accountID string) (model.Account, error)
         Seed()
         Check() bool
 }
 
-// Real implementation
+// BoltClient is the real implementation
 type BoltClient struct {
         boltDB *bolt.DB
 }
 
+// OpenBoltDb tries to open a hard-coded make-believe database.
 func (bc *BoltClient) OpenBoltDb() {
         var err error
         bc.boltDB, err = bolt.Open("accounts.db", 0600, nil)
         if err != nil {
-                log.Fatal(err)
+                logrus.Fatal(err)
         }
 }
 
-func (bc *BoltClient) QueryAccount(accountId string) (model.Account, error) {
-        // Allocate an empty Account instance we'll let json.Unmarhal populate for us in a bit.
+// QueryAccount lets us query an account object.
+func (bc *BoltClient) QueryAccount(ctx context.Context, accountID string) (model.Account, error) {
+
+        // Tracing code.
+        span := tracing.StartChildSpanFromContext(ctx, "QueryAccount")
+        defer span.Finish()
+
+        // Allocate an empty Account instance we'll let json.Unmarshal populate for us in a bit.
         account := model.Account{}
 
         // Read an object from the bucket using boltDB.View
@@ -41,9 +50,9 @@ func (bc *BoltClient) QueryAccount(accountId string) (model.Account, error) {
                 b := tx.Bucket([]byte("AccountBucket"))
 
                 // Read the value identified by our accountId supplied as []byte
-                accountBytes := b.Get([]byte(accountId))
+                accountBytes := b.Get([]byte(accountID))
                 if accountBytes == nil {
-                        return fmt.Errorf("No account found for " + accountId)
+                        return fmt.Errorf("No account found for " + accountID)
                 }
                 // Unmarshal the returned bytes into the account struct we created at
                 // the top of the function
@@ -60,14 +69,13 @@ func (bc *BoltClient) QueryAccount(accountId string) (model.Account, error) {
         return account, nil
 }
 
-
-// Start seeding accounts
+// Seed can be used to seed some sample accounts
 func (bc *BoltClient) Seed() {
         bc.initializeBucket()
         bc.seedAccounts()
 }
 
-// Naive healthcheck, just makes sure the DB connection has been initialized.
+// Check is a naive healthcheck, just makes sure the DB connection has been initialized.
 func (bc *BoltClient) Check() bool {
         return bc.boltDB != nil
 }
@@ -94,7 +102,7 @@ func (bc *BoltClient) seedAccounts() {
 
                 // Create an instance of our Account struct
                 acc := model.Account{
-                        Id: key,
+                        ID:   key,
                         Name: "Person_" + strconv.Itoa(i),
                 }
 
@@ -108,6 +116,5 @@ func (bc *BoltClient) seedAccounts() {
                         return err
                 })
         }
-        fmt.Printf("Seeded %v fake accounts...\n", total)
+        logrus.Infof("Seeded %v fake accounts...\n", total)
 }
-
