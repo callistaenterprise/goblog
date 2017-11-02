@@ -3,11 +3,11 @@ package messaging
 import (
 	"fmt"
 
-	"github.com/Sirupsen/logrus"
-	"github.com/streadway/amqp"
 	"context"
-        "github.com/opentracing/opentracing-go"
-        "github.com/callistaenterprise/goblog/common/tracing"
+	"github.com/Sirupsen/logrus"
+	"github.com/callistaenterprise/goblog/common/tracing"
+	"github.com/opentracing/opentracing-go"
+	"github.com/streadway/amqp"
 )
 
 // IMessagingClient defines our interface for connecting and consuming messages.
@@ -121,14 +121,14 @@ func buildMessage(ctx context.Context, body []byte) amqp.Publishing {
 	}
 	if ctx != nil {
 		child := tracing.StartChildSpanFromContext(ctx, "messaging")
-             	defer child.Finish()
-                var val = make(opentracing.TextMapCarrier)
-                err := tracing.AddTracingToTextMapCarrier(child, val)
-                if err != nil {
-                        logrus.Errorf("Error injecting span context: %v", err.Error())
-                } else {
-                        publishing.Headers = tracing.CarrierToMap(val)
-                }
+		defer child.Finish()
+		var val = make(opentracing.TextMapCarrier)
+		err := tracing.AddTracingToTextMapCarrier(child, val)
+		if err != nil {
+			logrus.Errorf("Error injecting span context: %v", err.Error())
+		} else {
+			publishing.Headers = tracing.CarrierToMap(val)
+		}
 	}
 	return publishing
 }

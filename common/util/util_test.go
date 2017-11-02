@@ -1,24 +1,23 @@
 package util
 
 import (
-        "testing"
-        . "github.com/smartystreets/goconvey/convey"
+	. "github.com/smartystreets/goconvey/convey"
+	"testing"
 )
-
 
 func TestResolveIp(t *testing.T) {
 
-        Convey("Given a Call request", t, func() {
+	Convey("Given a Call request", t, func() {
 
-                Convey("When", func() {
-                        ipAddress, err := ResolveIPFromHostsFile()
+		Convey("When", func() {
+			ipAddress, err := ResolveIPFromHostsFile()
 
-                        Convey("Then", func() {
-                                So(err, ShouldBeNil)
-                                So(ipAddress, ShouldNotBeNil)
-                                So(string(ipAddress), ShouldContainSubstring, ".")
-                        })
-                })
-        })
+			Convey("Then", func() {
+				So(err, ShouldBeNil)
+				So(ipAddress, ShouldNotBeNil)
+				So(string(ipAddress), ShouldContainSubstring, ".")
+			})
+		})
+	})
 
 }
