@@ -10,9 +10,21 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/callistaenterprise/goblog/common/messaging"
         "github.com/Sirupsen/logrus"
+	"github.com/callistaenterprise/goblog/common/util"
+	"encoding/json"
 )
 
 var MessagingClient messaging.IMessagingClient
+
+var myIp string
+
+func init() {
+	var err error
+	myIp, err = util.ResolveIPFromHostsFile()
+	if err != nil {
+		myIp = util.GetIP()
+	}
+}
 
 /**
  * Takes the POST body, decodes, processes and finally writes the result to the response.
@@ -28,11 +40,20 @@ func ProcessImage(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetAccountImage(w http.ResponseWriter, r *http.Request) {
-	data := []byte("http://imageservice:7777/file/cake.jpg")
-	w.Header().Set("Content-Type", "text/plain")
-	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
-	w.WriteHeader(http.StatusOK)
-	w.Write(data)
+	accountImage := AccountImage{
+		URL: "http://imageservice:7777/file/cake.jpg",
+		ServedBy: myIp,
+	}
+	data, err := json.Marshal(&accountImage)
+	if err != nil {
+		writeServerError(w, err.Error())
+	} else {
+		w.Header().Set("Content-Type", "text/plain")
+		w.Header().Set("Content-Length", strconv.Itoa(len(data)))
+		w.WriteHeader(http.StatusOK)
+		w.Write(data)
+	}
+
 }
 
 /**
@@ -83,4 +104,10 @@ func writeServerError(w http.ResponseWriter, msg string) {
 	w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
 	w.WriteHeader(http.StatusInternalServerError)
 	w.Write([]byte(msg))
+}
+
+// AccountImage
+type AccountImage struct {
+	URL string `json:"url"`
+	ServedBy string `json:"servedBy"`
 }

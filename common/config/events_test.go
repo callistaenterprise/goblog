@@ -8,7 +8,8 @@ import (
 	"gopkg.in/h2non/gock.v1"
 )
 
-var SERVICE_NAME = "accountservice"
+//  SERVICE_NAME is a constant.
+const serviceName = "accountservice"
 
 func TestHandleRefreshEvent(t *testing.T) {
 	// Configure initial viper values
@@ -27,7 +28,7 @@ func TestHandleRefreshEvent(t *testing.T) {
 		var body = `{"type":"RefreshRemoteApplicationEvent","timestamp":1494514362123,"originService":"config-server:docker:8888","destinationService":"accountservice:**","id":"53e61c71-cbae-4b6d-84bb-d0dcc0aeb4dc"}
 `
 		Convey("When handled", func() {
-			d := amqp.Delivery{Body: []byte(body), ConsumerTag: SERVICE_NAME}
+			d := amqp.Delivery{Body: []byte(body), ConsumerTag: serviceName}
 			HandleRefreshEvent(d)
 
 			Convey("Then Viper should have been re-populated with values from Source", func() {
@@ -45,7 +46,7 @@ func TestHandleRefreshEventForOtherApplication(t *testing.T) {
 		var body = `{"type":"RefreshRemoteApplicationEvent","timestamp":1494514362123,"originService":"config-server:docker:8888","destinationService":"vipservice:**","id":"53e61c71-cbae-4b6d-84bb-d0dcc0aeb4dc"}
 `
 		Convey("When parsed", func() {
-			d := amqp.Delivery{Body: []byte(body), ConsumerTag: SERVICE_NAME}
+			d := amqp.Delivery{Body: []byte(body), ConsumerTag: serviceName}
 			HandleRefreshEvent(d)
 
 			Convey("Then no outgoing HTTP requests should have been intercepted", func() {

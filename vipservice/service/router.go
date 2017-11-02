@@ -6,9 +6,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-/**
- * From http://thenewstack.io/make-a-restful-json-api-go/
- */
+// NewRouter from http://thenewstack.io/make-a-restful-json-api-go/
 func NewRouter() *mux.Router {
 
 	router := mux.NewRouter().StrictSlash(true)

@@ -17,10 +17,14 @@ import (
 	"github.com/callistaenterprise/goblog/common/tracing"
 )
 
+// DBClient instance for accessing the underlying BoltDB, be it the real one or a mock.
 var DBClient dbclient.IBoltClient
-var MessagingClient messaging.IMessagingClient
-var isHealthy = true
 
+// MessagingClient instance
+var MessagingClient messaging.IMessagingClient
+
+var myIp string
+var isHealthy = true
 var client = &http.Client{}
 
 var fallbackQuote = model.Quote{
@@ -34,20 +38,26 @@ func init() {
 	}
 	client.Transport = transport
 	cb.Client = *client
+        var err error
+        myIp, err = util.ResolveIPFromHostsFile()
+        if err != nil {
+                myIp = util.GetIP()
+        }
 }
 
+// GetAccount loads an account instance, including a quote and an image URL using sub-services.
 func GetAccount(w http.ResponseWriter, r *http.Request) {
 
 	// Read the 'accountId' path parameter from the mux map
-	var accountId = mux.Vars(r)["accountId"]
+	var accountID = mux.Vars(r)["accountId"]
 
 	// Read the account struct BoltDB
-	account, err := DBClient.QueryAccount(r.Context(), accountId)
-	account.ServedBy = util.GetIP()
+        account, err := DBClient.QueryAccount(r.Context(), accountID)
+	account.ServedBy = myIp
 
 	// If err, return a 404
 	if err != nil {
-		logrus.Errorf("Some error occured serving " + accountId + ": " + err.Error())
+		logrus.Errorf("Some error occured serving " + accountID + ": " + err.Error())
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -55,20 +65,20 @@ func GetAccount(w http.ResponseWriter, r *http.Request) {
 	notifyVIP(r.Context(), account) // Send VIP notification concurrently.
 
         account.Quote = getQuote(r.Context())
-	account.ImageUrl = getImageUrl(r.Context(), accountId)
+	account.ImageData = getImageURL(r.Context(), accountID)
 
 	// If found, marshal into JSON, write headers and content
 	data, _ := json.Marshal(account)
-	writeJsonResponse(w, http.StatusOK, data)
+	writeJSONResponse(w, http.StatusOK, data)
 }
 
 // If our hard-coded "VIP" account, spawn a goroutine to send a message.
 func notifyVIP(ctx context.Context, account model.Account) {
-	if account.Id == "10000" {
+	if account.ID == "10000" {
 		go func(account model.Account) {
-			vipNotification := model.VipNotification{AccountId: account.Id, ReadAt: time.Now().UTC().String()}
+			vipNotification := model.VipNotification{AccountID: account.ID, ReadAt: time.Now().UTC().String()}
 			data, _ := json.Marshal(vipNotification)
-			logrus.Infof("Notifying VIP account %v\n", account.Id)
+			logrus.Infof("Notifying VIP account %v\n", account.ID)
 			err := MessagingClient.PublishOnQueueWithContext(ctx, data, "vip_queue")
 			if err != nil {
 				logrus.Errorln(err.Error())
@@ -91,36 +101,43 @@ func getQuote(ctx context.Context) (model.Quote) {
         	quote := model.Quote{}
 		json.Unmarshal(body, &quote)
 		return quote
-	} else {
-		return fallbackQuote
 	}
+        return fallbackQuote
 }
 
-func getImageUrl(ctx context.Context, accountId string) (string) {
+func getImageURL(ctx context.Context, accountID string) (model.AccountImage) {
         child := tracing.StartSpanFromContextWithLogEvent(ctx, "getImageUrl", "Client send")
         defer tracing.CloseSpan(child, "Client Receive")
 
-        req, err := http.NewRequest("GET", "http://imageservice:7777/accounts/" + accountId, nil)
+        req, err := http.NewRequest("GET", "http://imageservice:7777/accounts/" + accountID, nil)
         body, err := cb.PerformHTTPRequestCircuitBreaker(tracing.UpdateContext(ctx, child), "imageservice", req)
         if err == nil {
-		return string(body)
-	} else {
-		return "http://path.to.placeholder"
+                accountImage := model.AccountImage{}
+		err := json.Unmarshal(body, &accountImage)
+                if err == nil {
+                        return accountImage
+                } else {
+                        panic("Unmarshalling accountImage struct went really bad. Msg: " + err.Error())
+                }
+
 	}
+        return model.AccountImage{URL: "http://path.to.placeholder", ServedBy: "fallback"}
 }
 
+// HealthCheck will return OK if the underlying BoltDB is healthy. At least healthy enough for demoing purposes.
 func HealthCheck(w http.ResponseWriter, r *http.Request) {
 	// Since we're here, we already know that HTTP service is up. Let's just check the state of the boltdb connection
 	dbUp := DBClient.Check()
 	if dbUp && isHealthy {
 		data, _ := json.Marshal(healthCheckResponse{Status: "UP"})
-		writeJsonResponse(w, http.StatusOK, data)
+		writeJSONResponse(w, http.StatusOK, data)
 	} else {
 		data, _ := json.Marshal(healthCheckResponse{Status: "Database unaccessible"})
-		writeJsonResponse(w, http.StatusServiceUnavailable, data)
+		writeJSONResponse(w, http.StatusServiceUnavailable, data)
 	}
 }
 
+// SetHealthyState can be used fake health problems.
 func SetHealthyState(w http.ResponseWriter, r *http.Request) {
 	// Read the 'accountId' path parameter from the mux map
 	var state, err = strconv.ParseBool(mux.Vars(r)["state"])
@@ -134,7 +151,7 @@ func SetHealthyState(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func writeJsonResponse(w http.ResponseWriter, status int, data []byte) {
+func writeJSONResponse(w http.ResponseWriter, status int, data []byte) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
 	w.Header().Set("Connection", "close")

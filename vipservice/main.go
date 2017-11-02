@@ -29,13 +29,13 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/callistaenterprise/goblog/common/config"
 	"github.com/callistaenterprise/goblog/common/messaging"
+	"github.com/callistaenterprise/goblog/common/tracing"
 	"github.com/callistaenterprise/goblog/vipservice/service"
 	"github.com/spf13/viper"
 	"github.com/streadway/amqp"
 	"os"
 	"os/signal"
 	"syscall"
-	"github.com/callistaenterprise/goblog/common/tracing"
 	"time"
 )
 
@@ -44,13 +44,13 @@ var appName = "vipservice"
 var messagingClient messaging.IMessagingClient
 
 func init() {
-	configServerUrl := flag.String("configServerUrl", "http://configserver:8888", "Address to config server")
+	configServerURL := flag.String("configServerUrl", "http://configserver:8888", "Address to config server")
 	profile := flag.String("profile", "test", "Environment profile, something similar to spring profiles")
 	configBranch := flag.String("configBranch", "master", "git branch to fetch configuration from")
 	flag.Parse()
 
 	viper.Set("profile", *profile)
-	viper.Set("configServerUrl", *configServerUrl)
+	viper.Set("configServerUrl", *configServerURL)
 	viper.Set("configBranch", *configBranch)
 }
 
@@ -78,30 +78,30 @@ func initializeTracing() {
 func onMessage(delivery amqp.Delivery) {
 	logrus.Infof("Got a message: %v\n", string(delivery.Body))
 
-        defer tracing.StartTraceFromCarrier(delivery.Headers, "vipservice#onMessage").Finish()
+	defer tracing.StartTraceFromCarrier(delivery.Headers, "vipservice#onMessage").Finish()
 
-        // Experimental!
-        //carrier := make(opentracing.HTTPHeadersCarrier)
-        //for k, v := range delivery.Headers {
-        //        carrier.Set(k, v.(string))
-        //}
-        //
-        //clientContext, err := tracing.Tracer.Extract(opentracing.HTTPHeaders, carrier)
-        //var span opentracing.Span
-        //if err == nil {
-        //        span = tracing.Tracer.StartSpan(
-        //                "vipservice onMessage", ext.RPCServerOption(clientContext))
-        //} else {
-        //        span = tracing.Tracer.StartSpan("vipservice onMessage")
-        //}
-        time.Sleep(time.Millisecond * 10)
+	// Experimental!
+	//carrier := make(opentracing.HTTPHeadersCarrier)
+	//for k, v := range delivery.Headers {
+	//        carrier.Set(k, v.(string))
+	//}
+	//
+	//clientContext, err := tracing.Tracer.Extract(opentracing.HTTPHeaders, carrier)
+	//var span opentracing.Span
+	//if err == nil {
+	//        span = tracing.Tracer.StartSpan(
+	//                "vipservice onMessage", ext.RPCServerOption(clientContext))
+	//} else {
+	//        span = tracing.Tracer.StartSpan("vipservice onMessage")
+	//}
+	time.Sleep(time.Millisecond * 10)
 }
 
 func initializeMessaging() {
 	if !viper.IsSet("amqp_server_url") {
 		panic("No 'broker_url' set in configuration, cannot start")
 	}
-	messagingClient = &messaging.MessagingClient{}
+	messagingClient = &messaging.AmqpClient{}
 	messagingClient.ConnectToBroker(viper.GetString("amqp_server_url"))
 
 	// Call the subscribe method with queue name and callback function
@@ -109,9 +109,9 @@ func initializeMessaging() {
 	failOnError(err, "Could not start subscribe to vip_queue")
 
 	err = messagingClient.Subscribe(viper.GetString("config_event_bus"), "topic", appName, config.HandleRefreshEvent)
-	failOnError(err, "Could not start subscribe to "+ viper.GetString("config_event_bus") +" topic")
+	failOnError(err, "Could not start subscribe to "+viper.GetString("config_event_bus")+" topic")
 
-        logrus.Infoln("Successfully initialized messaging for vipservice")
+	logrus.Infoln("Successfully initialized messaging for vipservice")
 }
 
 // Handles Ctrl+C or most other means of "controlled" shutdown gracefully. Invokes the supplied func before exiting.
