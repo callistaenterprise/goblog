@@ -87,20 +87,6 @@ endpoints:
   health:
     sensitive: false
 
-zuul:
-  ignoredServices: "*"
-  prefix: /api
-  routes:
-#    securedaccountservice:
-#      path: /secured/account/**
-#      url:  http://securityservice:6666/account
-    accountservice:
-      path: /accounts/**
-      url:  http://accountservice:6767/accounts
-    accountservicehealth:
-      path: /accounts/health
-      url:  http://accountservice:6767/health
-
 logging:
   level:
     ROOT: DEBUG
