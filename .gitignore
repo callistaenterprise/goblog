@@ -46,3 +46,6 @@ build
 .gradle
 
 token.txt
+
+loadtest/loadtest
+loadtest/target
