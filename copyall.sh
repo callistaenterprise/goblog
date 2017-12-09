@@ -7,6 +7,8 @@ cd vipservice;go get;go build -o vipservice-linux-amd64;echo built `pwd`;cd ..
 cd healthchecker;go get;go build -o healthchecker-linux-amd64;echo built `pwd`;cd ..
 cd imageservice;go get;go build -o imageservice-linux-amd64;echo built `pwd`;cd ..
 cd securityservice;go get;go build -o securityservice-linux-amd64;echo built `pwd`;cd ..
+cd dataservice;go get;go build -o dataservice-linux-amd64;echo built `pwd`;cd ..
+
 
 export GOOS=darwin
 
@@ -14,6 +16,7 @@ cp healthchecker/healthchecker-linux-amd64 accountservice/
 cp healthchecker/healthchecker-linux-amd64 vipservice/
 cp healthchecker/healthchecker-linux-amd64 imageservice/
 cp healthchecker/healthchecker-linux-amd64 securityservice/
+cp healthchecker/healthchecker-linux-amd64 dataservice/
 
 
 docker build -t someprefix/accountservice accountservice/
@@ -32,3 +35,7 @@ docker service create --log-driver=gelf --log-opt gelf-address=udp://192.168.99.
 docker build -t someprefix/securityservice securityservice/
 docker service rm securityservice
 docker service create --name=securityservice --replicas=1 --network=my_network -p=6666:6666 someprefix/securityservice
+
+docker build -t someprefix/dataservice dataservice/
+docker service rm dataservice
+docker service create --log-driver=gelf --log-opt gelf-address=udp://192.168.99.100:12202 --log-opt gelf-compression-type=none --name=dataservice --replicas=1 --network=my_network -p=7070:7070 someprefix/dataservice
