@@ -2,8 +2,9 @@ package service
 
 import (
 	"net/http"
-	"github.com/gorilla/mux"
+
 	"github.com/callistaenterprise/goblog/common/tracing"
+	"github.com/gorilla/mux"
 )
 
 /**

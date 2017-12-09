@@ -42,7 +42,7 @@ func main() {
 	initializeBoltClient()
 	initializeMessaging()
 	initializeTracing()
-	cb.ConfigureHystrix([]string{"imageservice", "quotes-service"}, service.MessagingClient)
+	cb.ConfigureHystrix([]string{"accountservice->imageservice", "accountservice->quotes-service"}, service.MessagingClient)
 
 	handleSigterm(func() {
 		cb.Deregister(service.MessagingClient)

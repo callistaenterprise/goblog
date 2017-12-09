@@ -1,17 +1,19 @@
 package service
 
 import (
-	"net/http"
-	"image"
-	"fmt"
-	"strconv"
-	"os"
 	"bytes"
-	"github.com/gorilla/mux"
-	"github.com/callistaenterprise/goblog/common/messaging"
-        "github.com/Sirupsen/logrus"
-	"github.com/callistaenterprise/goblog/common/util"
 	"encoding/json"
+	"fmt"
+	"image"
+	"net/http"
+	"os"
+	"strconv"
+
+	"github.com/Sirupsen/logrus"
+	"github.com/callistaenterprise/goblog/common/messaging"
+	"github.com/callistaenterprise/goblog/common/util"
+	"github.com/gorilla/mux"
+	"github.com/spf13/viper"
 )
 
 var MessagingClient messaging.IMessagingClient
@@ -41,7 +43,7 @@ func ProcessImage(w http.ResponseWriter, r *http.Request) {
 
 func GetAccountImage(w http.ResponseWriter, r *http.Request) {
 	accountImage := AccountImage{
-		URL: "http://imageservice:7777/file/cake.jpg",
+		URL:      viper.GetString("image_url"),
 		ServedBy: myIp,
 	}
 	data, err := json.Marshal(&accountImage)
@@ -98,7 +100,6 @@ func writeAndReturn(w http.ResponseWriter, sourceImage image.Image) {
 
 }
 
-
 func writeServerError(w http.ResponseWriter, msg string) {
 	logrus.Error(msg)
 	w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
@@ -108,6 +109,6 @@ func writeServerError(w http.ResponseWriter, msg string) {
 
 // AccountImage
 type AccountImage struct {
-	URL string `json:"url"`
+	URL      string `json:"url"`
 	ServedBy string `json:"servedBy"`
 }
