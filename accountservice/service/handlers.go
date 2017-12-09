@@ -17,8 +17,8 @@ import (
     "github.com/callistaenterprise/goblog/common/tracing"
 )
 
-// DBClient instance for accessing the underlying BoltDB, be it the real one or a mock.
-var DBClient dbclient.IBoltClient
+// var DBClient dbclient.IBoltClient
+var DBClient dbclient.IGormClient
 
 // MessagingClient instance
 var MessagingClient messaging.IMessagingClient

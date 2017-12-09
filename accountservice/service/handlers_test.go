@@ -18,7 +18,7 @@ import (
         "context"
 )
 
-// mocks for boltdb and messsaging
+var mockRepo = &dbclient.MockGormClient{}
 var mockRepo *dbclient.MockBoltClient
 var mockMessagingClient *messaging.MockMessagingClient
 

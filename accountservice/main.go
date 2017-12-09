@@ -40,6 +40,11 @@ func main() {
 		viper.GetString("configBranch"))
 
 	initializeBoltClient()
+	service.DBClient = &dbclient.GormClient{}
+	service.DBClient.SetupDB(viper.GetString("cockroachdb_conn_url"))
+	service.DBClient.SeedAccounts()
+	defer service.DBClient.Close()
+
 	initializeMessaging()
 	initializeTracing()
 	cb.ConfigureHystrix([]string{"accountservice->imageservice", "accountservice->quotes-service"}, service.MessagingClient)
