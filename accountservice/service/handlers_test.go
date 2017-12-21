@@ -2,24 +2,22 @@ package service
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http/httptest"
 	"testing"
 	"time"
 
 	"context"
 
-	"github.com/callistaenterprise/goblog/accountservice/dbclient"
-	"github.com/callistaenterprise/goblog/accountservice/model"
+	"github.com/callistaenterprise/goblog/common/model"
 	"github.com/callistaenterprise/goblog/common/messaging"
 	"github.com/callistaenterprise/goblog/common/tracing"
 	"github.com/opentracing/opentracing-go"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/stretchr/testify/mock"
 	"gopkg.in/h2non/gock.v1"
+	"github.com/callistaenterprise/goblog/common/circuitbreaker"
 )
 
-var mockRepo = &dbclient.MockGormClient{}
 var mockMessagingClient *messaging.MockMessagingClient
 
 // mock types
@@ -28,15 +26,19 @@ var anyByteArray = mock.AnythingOfType("[]uint8")
 
 // Run this first in each test, poor substitute for a proper @Before func
 func reset() {
-	mockRepo = &dbclient.MockGormClient{}
 	mockMessagingClient = &messaging.MockMessagingClient{}
 	gock.InterceptClient(client)
+	circuitbreaker.Client = *client
 	tracing.SetTracer(opentracing.NoopTracer{})
 }
 
 func TestGetAccount(t *testing.T) {
 	reset()
 	defer gock.Off()
+	gock.New("http://dataservice:7070").
+		Get("/accounts/123").
+		Reply(200).
+		BodyString(`{"ID":"123", "Name":"Test Testsson", "ServedBy":"127.0.0.1"}`)
 	gock.New("http://quotes-service:8080").
 		Get("/api/quote").
 		MatchParam("strength", "4").
@@ -46,10 +48,6 @@ func TestGetAccount(t *testing.T) {
 		Get("/accounts/10000").
 		Reply(200).
 		BodyString(`{"imageUrl":"http://test.path"}`)
-
-	mockRepo.On("QueryAccount", mock.Anything, "123").Return(model.Account{ID: "123", Name: "Person_123"}, nil)
-	mockRepo.On("QueryAccount", mock.Anything, "456").Return(model.Account{}, fmt.Errorf("Some error"))
-	DBClient = mockRepo
 
 	Convey("Given a HTTP request for /accounts/123", t, func() {
 		req := httptest.NewRequest("GET", "/accounts/123", nil)
@@ -64,7 +62,7 @@ func TestGetAccount(t *testing.T) {
 				account := model.Account{}
 				json.Unmarshal(resp.Body.Bytes(), &account)
 				So(account.ID, ShouldEqual, "123")
-				So(account.Name, ShouldEqual, "Person_123")
+				So(account.Name, ShouldEqual, "Test Testsson")
 				So(account.Quote.Text, ShouldEqual, "May the source be with you, always.")
 			})
 		})
@@ -103,18 +101,21 @@ func TestGetAccountWrongPath(t *testing.T) {
 func TestGetAccountNoQuote(t *testing.T) {
 	reset()
 	defer gock.Off()
+	gock.New("http://dataservice:7070").
+		Get("/accounts/123").
+		Reply(200).
+		BodyString(`{"ID":"123", "Name":"Test Testsson", "ServedBy":"127.0.0.1"}`)
+
 	gock.New("http://quotes-service:8080").
 		Get("/api/quote").
 		MatchParam("strength", "4").
-		Reply(500)
+		Reply(500).
+		BodyString(`{"imageUrl":"http://test.path"}`)
+
 	gock.New("http://imageservice:7777").
 		Get("/accounts/10000").
 		Reply(200).
 		BodyString(`{"imageUrl":"http://test.path"}`)
-
-	mockRepo := &dbclient.MockGormClient{}
-	mockRepo.On("QueryAccount", mock.Anything, "123").Return(model.Account{ID: "123", Name: "Person_123"}, nil)
-	DBClient = mockRepo
 
 	Convey("Given a HTTP request for /accounts/123", t, func() {
 		req := httptest.NewRequest("GET", "/accounts/123", nil).WithContext(context.TODO())
@@ -129,7 +130,7 @@ func TestGetAccountNoQuote(t *testing.T) {
 				account := model.Account{}
 				json.Unmarshal(resp.Body.Bytes(), &account)
 				So(account.ID, ShouldEqual, "123")
-				So(account.Name, ShouldEqual, "Person_123")
+				So(account.Name, ShouldEqual, "Test Testsson")
 				So(account.Quote.Text, ShouldEqual, "May the source be with you, always.")
 			})
 		})
@@ -138,6 +139,11 @@ func TestGetAccountNoQuote(t *testing.T) {
 
 func TestNotificationIsSentForVIPAccount(t *testing.T) {
 	reset()
+	gock.New("http://dataservice:7070").
+		Get("/accounts/10000").
+		Reply(200).
+		BodyString(`{"ID":"10000", "Name":"Test Testsson", "ServedBy":"127.0.0.1"}`)
+
 	gock.New("http://quotes-service:8080").
 		Get("/api/quote").
 		MatchParam("strength", "4").
@@ -147,9 +153,6 @@ func TestNotificationIsSentForVIPAccount(t *testing.T) {
 		Get("/accounts/10000").
 		Reply(200).
 		BodyString(`{"imageUrl":"http://test.path"}`)
-
-	mockRepo.On("QueryAccount", mock.Anything, "10000").Return(model.Account{ID: "10000", Name: "Person_10000"}, nil)
-	DBClient = mockRepo
 
 	mockMessagingClient.On("PublishOnQueueWithContext", mock.Anything, anyByteArray, anyString).Return(nil)
 	MessagingClient = mockMessagingClient
@@ -170,8 +173,6 @@ func TestNotificationIsSentForVIPAccount(t *testing.T) {
 
 func TestHealthCheckOk(t *testing.T) {
 	reset()
-	mockRepo.On("Check").Return(true)
-	DBClient = mockRepo
 
 	Convey("Given a HTTP req for /health", t, func() {
 
@@ -181,24 +182,6 @@ func TestHealthCheckOk(t *testing.T) {
 			NewRouter().ServeHTTP(resp, req)
 			Convey("Then expect 200 OK", func() {
 				So(resp.Code, ShouldEqual, 200)
-			})
-		})
-	})
-}
-
-func TestHealthCheckFailsDueToDb(t *testing.T) {
-	reset()
-	mockRepo.On("Check").Return(false)
-	DBClient = mockRepo
-
-	Convey("Given a HTTP req for /health", t, func() {
-
-		req := httptest.NewRequest("GET", "/health", nil)
-		resp := httptest.NewRecorder()
-		Convey("When served", func() {
-			NewRouter().ServeHTTP(resp, req)
-			Convey("Then expect 503 Service Unavailable", func() {
-				So(resp.Code, ShouldEqual, 503)
 			})
 		})
 	})

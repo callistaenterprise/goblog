@@ -3,7 +3,6 @@ package circuitbreaker
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
@@ -17,6 +16,7 @@ import (
 	"github.com/callistaenterprise/goblog/common/util"
 	"github.com/eapache/go-resiliency/retrier"
 	"github.com/spf13/viper"
+	"fmt"
 )
 
 func init() {
@@ -86,6 +86,7 @@ func callWithRetries(req *http.Request, output chan []byte) error {
 	attempt := 0
 	err := r.Run(func() error {
 		attempt++
+		logrus.Infof("Retrier calling: %v\n", req)
 		resp, err := Client.Do(req)
 		if err == nil && resp.StatusCode < 299 {
 			responseBody, err := ioutil.ReadAll(resp.Body)

@@ -42,6 +42,10 @@ imageservice/healthchecker-linux-amd64
 imageservice/imageservice-linux-amd64
 imageservice/imageservice
 
+dataservice/healthchecker-linux-amd64
+dataservice/dataservice-linux-amd64
+dataservice/dataservice
+
 build
 .gradle
 

@@ -16,6 +16,7 @@ import (
 	"github.com/callistaenterprise/goblog/common/tracing"
 	"github.com/callistaenterprise/goblog/common/util"
 	"github.com/gorilla/mux"
+	"fmt"
 )
 
 
@@ -46,6 +47,7 @@ func init() {
 	if err != nil {
 		myIp = util.GetIP()
 	}
+	fmt.Println("Init method executed")
 }
 
 // GetAccount loads an account instance, including a quote and an image URL using sub-services.
@@ -55,7 +57,12 @@ func GetAccount(w http.ResponseWriter, r *http.Request) {
 	var accountID = mux.Vars(r)["accountId"]
 
 	// Read the account struct BoltDB
+	// account := getAccount(r.Context(), accountID)
 	account := getAccount(r.Context(), accountID)
+	if account.ID == "" {
+		writeJSONResponse(w, http.StatusNotFound, []byte("Not found"))
+		return
+	}
 	account.Quote = getQuote(r.Context())
 	account.ImageData = getImageURL(r.Context(), accountID)
 
@@ -99,18 +106,22 @@ func getQuote(ctx context.Context) model.Quote {
 	return fallbackQuote
 }
 
-func getAccount(ctx context.Context, accountId string) (model.Account) {
+
+func getAccount(ctx context.Context, accountID string) (model.Account) {
 	// Start a new opentracing child span
 	child := tracing.StartSpanFromContextWithLogEvent(ctx, "getAccount", "Client send")
 	defer tracing.CloseSpan(child, "Client Receive")
 
+	logrus.Infof("Calling dataservice with %v\n", accountID)
 	// Create the http request and pass it to the circuit breaker
-	req, err := http.NewRequest("GET", "http://dataservice:7070/account/" + accountId, nil)
+	req, err := http.NewRequest("GET", "http://dataservice:7070/accounts/" + accountID, nil)
 	body, err := cb.PerformHTTPRequestCircuitBreaker(tracing.UpdateContext(ctx, child), "accountservice->dataservice", req)
 	if err == nil {
 		account := model.Account{}
 		json.Unmarshal(body, &account)
 		return account
+	} else {
+		logrus.Errorf("Error: %v\n", err.Error())
 	}
 	return fallbackAccount
 }

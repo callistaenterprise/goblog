@@ -51,7 +51,7 @@ func (gc *GormClient) SetupDB(addr string) {
 	}
 
 	// Migrate the schema
-	gc.crDB.AutoMigrate(&model.Account{}, &model.Quote{})
+	gc.crDB.AutoMigrate(&model.Account{}, &model.AccountEvent{})
 }
 
 func (gc *GormClient) SeedAccounts() error {
