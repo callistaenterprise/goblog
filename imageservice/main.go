@@ -30,8 +30,8 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/callistaenterprise/goblog/common/config"
-	"github.com/callistaenterprise/goblog/common/messaging"
 	"github.com/callistaenterprise/goblog/common/tracing"
+	"github.com/callistaenterprise/goblog/imageservice/dbclient"
 	"github.com/callistaenterprise/goblog/imageservice/service"
 	"github.com/spf13/viper"
 )
@@ -56,8 +56,11 @@ func main() {
 
 	start := time.Now().UTC()
 	config.LoadConfigurationFromBranch(viper.GetString("configServerUrl"), appName, viper.GetString("profile"), viper.GetString("configBranch"))
-	initializeMessaging()
 	initializeTracing()
+	service.DBClient = &dbclient.GormClient{}
+	service.DBClient.SetupDB(viper.GetString("cockroachdb_conn_url"))
+	service.DBClient.SeedAccountImages()
+
 	go service.StartWebServer(viper.GetString("server_port")) // Starts HTTP service  (async)
 
 	logrus.Infof("Started %v in %v", appName, time.Now().UTC().Sub(start))
@@ -68,14 +71,4 @@ func main() {
 }
 func initializeTracing() {
 	tracing.InitTracing(viper.GetString("zipkin_server_url"), appName)
-}
-
-func initializeMessaging() {
-	if !viper.IsSet("amqp_server_url") {
-		panic("No 'amqp_server_url' set in configuration, cannot start")
-	}
-
-	service.MessagingClient = &messaging.AmqpClient{}
-	service.MessagingClient.ConnectToBroker(viper.GetString("amqp_server_url"))
-	service.MessagingClient.Subscribe(viper.GetString("config_event_bus"), "topic", appName, config.HandleRefreshEvent)
 }

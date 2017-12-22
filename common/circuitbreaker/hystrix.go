@@ -141,6 +141,7 @@ func Deregister(amqpClient messaging.IMessagingClient) {
 	}
 	bytes, _ := json.Marshal(token)
 	amqpClient.PublishOnQueue(bytes, "discovery")
+	logrus.Infoln("Sent deregistration token over SpringCloudBus")
 }
 
 func publishDiscoveryToken(amqpClient messaging.IMessagingClient) {

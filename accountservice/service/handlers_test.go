@@ -7,8 +7,7 @@ import (
 	"time"
 
 	"context"
-
-	"github.com/callistaenterprise/goblog/common/model"
+	internalmodel "github.com/callistaenterprise/goblog/accountservice/model"
 	"github.com/callistaenterprise/goblog/common/messaging"
 	"github.com/callistaenterprise/goblog/common/tracing"
 	"github.com/opentracing/opentracing-go"
@@ -59,7 +58,7 @@ func TestGetAccount(t *testing.T) {
 			Convey("Then the response should be a 200", func() {
 				So(resp.Code, ShouldEqual, 200)
 
-				account := model.Account{}
+				account := internalmodel.Account{}
 				json.Unmarshal(resp.Body.Bytes(), &account)
 				So(account.ID, ShouldEqual, "123")
 				So(account.Name, ShouldEqual, "Test Testsson")
@@ -127,7 +126,7 @@ func TestGetAccountNoQuote(t *testing.T) {
 			Convey("Then the response should be a 200", func() {
 				So(resp.Code, ShouldEqual, 200)
 
-				account := model.Account{}
+				account := internalmodel.Account{}
 				json.Unmarshal(resp.Body.Bytes(), &account)
 				So(account.ID, ShouldEqual, "123")
 				So(account.Name, ShouldEqual, "Test Testsson")

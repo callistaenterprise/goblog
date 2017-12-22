@@ -6,14 +6,17 @@ import (
     "net/http"
     "github.com/callistaenterprise/goblog/dataservice/dbclient"
     "strconv"
-    "github.com/callistaenterprise/goblog/common/messaging"
 )
 
 // DBClient is our GORM instance.
 var DBClient dbclient.IGormClient
-// MessagingClient instance
-var MessagingClient messaging.IMessagingClient
 
+func GetAccountByNameWithCount(w http.ResponseWriter, r *http.Request) {
+    var accountName = mux.Vars(r)["accountName"]
+    result, _ := DBClient.QueryAccountByNameWithCount(r.Context(), accountName)
+    data, _ := json.Marshal(&result)
+    writeJSONResponse(w, http.StatusOK, data)
+}
 
 // GetAccount loads an account instance, including a quote and an image URL using sub-services.
 func GetAccount(w http.ResponseWriter, r *http.Request) {

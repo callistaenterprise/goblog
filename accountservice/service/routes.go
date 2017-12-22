@@ -22,6 +22,12 @@ var routes = Routes{
 		"/accounts/{accountId}", // Route pattern
 		GetAccount,
 	},
+	//Route{
+	//	"GraphQL", // Name
+	//	"GET",        // HTTP method
+	//	"/ql", // Route pattern
+	//	GetAccountQL,
+	//},
 	Route{
 		"HealthCheck",
 		"GET",
@@ -34,4 +40,5 @@ var routes = Routes{
 		"/testability/healthy/{state}",
 		SetHealthyState,
 	},
+
 }
