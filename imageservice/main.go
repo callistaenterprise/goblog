@@ -24,51 +24,70 @@ SOFTWARE.
 package main
 
 import (
-	"flag"
-	"sync"
-	"time"
+    "flag"
+    "sync"
+    "time"
 
-	"github.com/Sirupsen/logrus"
-	"github.com/callistaenterprise/goblog/common/config"
-	"github.com/callistaenterprise/goblog/common/tracing"
-	"github.com/callistaenterprise/goblog/imageservice/dbclient"
-	"github.com/callistaenterprise/goblog/imageservice/service"
-	"github.com/spf13/viper"
+    "github.com/Sirupsen/logrus"
+    "github.com/callistaenterprise/goblog/common/config"
+    "github.com/callistaenterprise/goblog/common/tracing"
+    "github.com/callistaenterprise/goblog/imageservice/dbclient"
+    "github.com/callistaenterprise/goblog/imageservice/service"
+    "github.com/spf13/viper"
+    "os"
+    "syscall"
+    "os/signal"
 )
 
 var appName = "imageservice"
 
 func init() {
-	profile := flag.String("profile", "test", "Environment profile, something similar to spring profiles")
-	configServerURL := flag.String("configServerUrl", "http://configserver:8888", "Address to config server")
-	configBranch := flag.String("configBranch", "master", "git branch to fetch configuration from")
+    profile := flag.String("profile", "test", "Environment profile, something similar to spring profiles")
+    configServerURL := flag.String("configServerUrl", "http://configserver:8888", "Address to config server")
+    configBranch := flag.String("configBranch", "master", "git branch to fetch configuration from")
 
-	flag.Parse()
+    flag.Parse()
 
-	viper.Set("profile", *profile)
-	viper.Set("configServerUrl", *configServerURL)
-	viper.Set("configBranch", *configBranch)
+    viper.Set("profile", *profile)
+    viper.Set("configServerUrl", *configServerURL)
+    viper.Set("configBranch", *configBranch)
 }
 
 func main() {
-	logrus.SetFormatter(&logrus.JSONFormatter{})
-	logrus.Infof("Starting %v", appName)
+    logrus.SetFormatter(&logrus.JSONFormatter{})
+    logrus.Infof("Starting %v", appName)
 
-	start := time.Now().UTC()
-	config.LoadConfigurationFromBranch(viper.GetString("configServerUrl"), appName, viper.GetString("profile"), viper.GetString("configBranch"))
-	initializeTracing()
-	service.DBClient = &dbclient.GormClient{}
-	service.DBClient.SetupDB(viper.GetString("cockroachdb_conn_url"))
-	service.DBClient.SeedAccountImages()
+    start := time.Now().UTC()
+    config.LoadConfigurationFromBranch(viper.GetString("configServerUrl"), appName, viper.GetString("profile"), viper.GetString("configBranch"))
+    initializeTracing()
+    service.DBClient = &dbclient.GormClient{}
+    service.DBClient.SetupDB(viper.GetString("cockroachdb_conn_url"))
+    service.DBClient.SeedAccountImages()
 
-	go service.StartWebServer(viper.GetString("server_port")) // Starts HTTP service  (async)
+    go service.StartWebServer(viper.GetString("server_port")) // Starts HTTP service  (async)
 
-	logrus.Infof("Started %v in %v", appName, time.Now().UTC().Sub(start))
-	// Block...
-	wg := sync.WaitGroup{} // Use a WaitGroup to block main() exit
-	wg.Add(1)
-	wg.Wait()
+    handleSigterm(func() {
+        logrus.Infoln("Captured Ctrl+C")
+        service.DBClient.Close()
+    })
+
+    logrus.Infof("Started %v in %v", appName, time.Now().UTC().Sub(start))
+    // Block...
+    wg := sync.WaitGroup{} // Use a WaitGroup to block main() exit
+    wg.Add(1)
+    wg.Wait()
 }
 func initializeTracing() {
-	tracing.InitTracing(viper.GetString("zipkin_server_url"), appName)
+    tracing.InitTracing(viper.GetString("zipkin_server_url"), appName)
+}
+
+func handleSigterm(handleExit func()) {
+    c := make(chan os.Signal, 1)
+    signal.Notify(c, os.Interrupt)
+    signal.Notify(c, syscall.SIGTERM)
+    go func() {
+        <-c
+        handleExit()
+        os.Exit(1)
+    }()
 }

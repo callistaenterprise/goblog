@@ -1,11 +1,15 @@
 package service
 
 import (
-    "github.com/gorilla/mux"
     "encoding/json"
+    "io/ioutil"
     "net/http"
-    "github.com/callistaenterprise/goblog/dataservice/dbclient"
     "strconv"
+
+    "github.com/Sirupsen/logrus"
+    "github.com/callistaenterprise/goblog/common/model"
+    "github.com/callistaenterprise/goblog/dataservice/dbclient"
+    "github.com/gorilla/mux"
 )
 
 // DBClient is our GORM instance.
@@ -16,6 +20,42 @@ func GetAccountByNameWithCount(w http.ResponseWriter, r *http.Request) {
     result, _ := DBClient.QueryAccountByNameWithCount(r.Context(), accountName)
     data, _ := json.Marshal(&result)
     writeJSONResponse(w, http.StatusOK, data)
+}
+
+func UpdateAccount(w http.ResponseWriter, r *http.Request) {
+    accountData := model.AccountData{}
+    body, err := ioutil.ReadAll(r.Body)
+    err = json.Unmarshal(body, &accountData)
+
+    accountData, err = DBClient.UpdateAccount(r.Context(), accountData)
+
+    if err != nil {
+        writeJSONResponse(w, http.StatusInternalServerError, []byte(err.Error()))
+        return
+    }
+    data, err := json.Marshal(&accountData)
+    writeJSONResponse(w, http.StatusOK, data)
+}
+
+func StoreAccount(w http.ResponseWriter, r *http.Request) {
+    accountData := model.AccountData{}
+    body, err := ioutil.ReadAll(r.Body)
+    err = json.Unmarshal(body, &accountData)
+    if err != nil {
+        logrus.Errorf("Problem unmarshalling AccountData JSON: %v", err.Error())
+        writeJSONResponse(w, http.StatusInternalServerError, []byte(err.Error()))
+        return
+    }
+
+    accountData, err = DBClient.StoreAccount(r.Context(), accountData)
+    if err != nil {
+        logrus.Errorf("Problem storing AccountData: %v", err.Error())
+        writeJSONResponse(w, http.StatusInternalServerError, []byte(err.Error()))
+        return
+    }
+
+    data, err := json.Marshal(&accountData)
+    writeJSONResponse(w, http.StatusCreated, data)
 }
 
 // GetAccount loads an account instance, including a quote and an image URL using sub-services.
@@ -31,6 +71,7 @@ func GetAccount(w http.ResponseWriter, r *http.Request) {
         data, _ := json.Marshal(account)
         writeJSONResponse(w, http.StatusOK, data)
     } else {
+        logrus.Errorf("Error reading accountID '%v' from DB: %v", accountID, err.Error())
         if err.Error() != "" {
             writeJSONResponse(w, http.StatusInternalServerError, []byte(err.Error()))
         } else {

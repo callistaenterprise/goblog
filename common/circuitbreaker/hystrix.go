@@ -86,7 +86,6 @@ func callWithRetries(req *http.Request, output chan []byte) error {
 	attempt := 0
 	err := r.Run(func() error {
 		attempt++
-		logrus.Infof("Retrier calling: %v\n", req)
 		resp, err := Client.Do(req)
 		if err == nil && resp.StatusCode < 299 {
 			responseBody, err := ioutil.ReadAll(resp.Body)
@@ -173,9 +172,9 @@ func resolveProperty(command string, prop string) int {
 func getDefaultHystrixConfigPropertyValue(prop string) int {
 	switch prop {
 	case "Timeout":
-		return hystrix.DefaultTimeout
+		return 3000 //hystrix.DefaultTimeout
 	case "MaxConcurrentRequests":
-		return hystrix.DefaultMaxConcurrent
+		return 200 //hystrix.DefaultMaxConcurrent
 	case "RequestVolumeThreshold":
 		return hystrix.DefaultVolumeThreshold
 	case "SleepWindow":

@@ -3,15 +3,16 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http/httptest"
 	"testing"
-	"github.com/callistaenterprise/goblog/dataservice/dbclient"
+
 	"github.com/callistaenterprise/goblog/common/model"
+	"github.com/callistaenterprise/goblog/common/tracing"
+	"github.com/callistaenterprise/goblog/dataservice/dbclient"
+	"github.com/opentracing/opentracing-go"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/stretchr/testify/mock"
-	"github.com/callistaenterprise/goblog/common/tracing"
-	"github.com/opentracing/opentracing-go"
-	"io/ioutil"
 )
 
 var mockRepo = &dbclient.MockGormClient{}
@@ -29,8 +30,8 @@ func reset() {
 func TestGetAccount(t *testing.T) {
 	reset()
 
-	mockRepo.On("QueryAccount", mock.Anything, "123").Return(model.Account{ID: "123", Name: "Person_123"}, nil)
-	mockRepo.On("QueryAccount", mock.Anything, "456").Return(model.Account{}, fmt.Errorf(""))
+	mockRepo.On("QueryAccount", mock.Anything, "123").Return(model.AccountData{ID: "123", Name: "Person_123"}, nil)
+	mockRepo.On("QueryAccount", mock.Anything, "456").Return(model.AccountData{}, fmt.Errorf(""))
 	DBClient = mockRepo
 
 	Convey("Given a HTTP request for /accounts/123", t, func() {
@@ -43,7 +44,7 @@ func TestGetAccount(t *testing.T) {
 			Convey("Then the response should be a 200", func() {
 				So(resp.Code, ShouldEqual, 200)
 
-				account := model.Account{}
+				account := model.AccountData{}
 				json.Unmarshal(resp.Body.Bytes(), &account)
 				So(account.ID, ShouldEqual, "123")
 				So(account.Name, ShouldEqual, "Person_123")

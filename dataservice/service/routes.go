@@ -17,7 +17,7 @@ type Routes []Route
 var routes = Routes{
 	Route{
 		"GetAccountByNameWithCount", // Name
-		"GET",        // HTTP method
+		"GET", // HTTP method
 		"/accountsbyname/{accountName}", // Route pattern
 		GetAccountByNameWithCount,
 	},
@@ -26,6 +26,18 @@ var routes = Routes{
 		"GET",        // HTTP method
 		"/accounts/{accountId}", // Route pattern
 		GetAccount,
+	},
+	Route{
+		"StoreAccount", // Name
+		"POST",         // HTTP method
+		"/accounts",    // Route pattern
+		StoreAccount,
+	},
+	Route{
+		"UpdateAccount", // Name
+		"PUT",           // HTTP method
+		"/accounts",     // Route pattern
+		UpdateAccount,
 	},
 	Route{
 		"HealthCheck",

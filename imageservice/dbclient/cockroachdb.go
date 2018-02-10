@@ -10,14 +10,42 @@ import (
     "github.com/stretchr/testify/mock"
     "context"
     "github.com/Sirupsen/logrus"
+    "github.com/twinj/uuid"
+    "github.com/callistaenterprise/goblog/common/tracing"
 )
 
 type IGormClient interface {
+    UpdateAccountImage(ctx context.Context, accountImage model.AccountImage) (model.AccountImage, error)
+    StoreAccountImage(ctx context.Context, accountImage model.AccountImage) (model.AccountImage, error)
     QueryAccountImage(ctx context.Context, accountId string) (model.AccountImage, error)
     SetupDB(addr string)
     SeedAccountImages() error
     Check() bool
     Close()
+}
+
+func (gc *GormClient) StoreAccountImage(ctx context.Context, accountImage model.AccountImage) (model.AccountImage, error) {
+    tx := gc.crDB.Begin()
+    accountImage.ID = uuid.NewV4().String()
+    tx = tx.Create(&accountImage)
+    if tx.Error != nil {
+        logrus.Errorf("Error storing account image: %v", tx.Error.Error())
+        return model.AccountImage{}, tx.Error
+    }
+    tx = tx.Commit()
+    return accountImage, nil
+}
+
+func (gc *GormClient) UpdateAccountImage(ctx context.Context, accountImage model.AccountImage) (model.AccountImage, error) {
+    tx := gc.crDB.Begin()
+    tx = tx.Save(&accountImage)
+    if tx.Error != nil {
+        logrus.Errorf("Error updating account image: %v", tx.Error.Error())
+        return model.AccountImage{}, tx.Error
+    }
+    tx = tx.Commit()
+    accountImage, _ = gc.QueryAccountImage(ctx, accountImage.ID)
+    return accountImage, nil
 }
 
 type GormClient struct {
@@ -34,6 +62,9 @@ func (gc *GormClient) Close() {
 }
 
 func (gc *GormClient) QueryAccountImage(ctx context.Context, accountId string) (model.AccountImage, error) {
+    span := tracing.StartChildSpanFromContext(ctx, "GormClient.QueryAccountImage")
+    defer span.Finish()
+
     if gc.crDB == nil {
         return model.AccountImage{}, fmt.Errorf("Connection to DB not established!")
     }
@@ -84,6 +115,15 @@ func (gc *GormClient) SeedAccountImages() error {
 // MockGormClient is a mock implementation of a datastore client for testing purposes
 type MockGormClient struct {
     mock.Mock
+}
+
+func (m *MockGormClient) UpdateAccountImage(ctx context.Context, accountImage model.AccountImage) (model.AccountImage, error) {
+    args := m.Mock.Called(ctx, accountImage)
+    return args.Get(0).(model.AccountImage), args.Error(1)
+}
+func (m *MockGormClient) StoreAccountImage(ctx context.Context, accountImage model.AccountImage) (model.AccountImage, error) {
+    args := m.Mock.Called(ctx, accountImage)
+    return args.Get(0).(model.AccountImage), args.Error(1)
 }
 
 func (m *MockGormClient) QueryAccountImage(ctx context.Context, accountId string) (model.AccountImage, error) {

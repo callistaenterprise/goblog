@@ -16,7 +16,7 @@ func NewRouter() *mux.Router {
 		router.Methods(route.Method).
 			Path(route.Pattern).
 			Name(route.Name).
-			Handler(loadTracing(route.HandlerFunc))
+			Handler(loadTracing(route.HandlerFunc, route.Name))
 
 	}
 
@@ -32,9 +32,9 @@ func NewRouter() *mux.Router {
 	return router
 }
 
-func loadTracing(next http.Handler) http.Handler {
+func loadTracing(next http.Handler, handlerName string) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		span := tracing.StartHTTPTrace(req, "GetAccount")
+		span := tracing.StartHTTPTrace(req, handlerName)
 		defer span.Finish()
 
 		ctx := tracing.UpdateContext(req.Context(), span)
