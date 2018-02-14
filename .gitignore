@@ -53,3 +53,7 @@ token.txt
 
 loadtest/loadtest
 loadtest/target
+
+dbloadtest/logs
+dbloadtest/dbloadtest
+dbloadtest/target

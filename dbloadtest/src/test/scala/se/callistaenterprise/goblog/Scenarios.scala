@@ -7,14 +7,14 @@ import scala.concurrent.duration._
 
 object Scenarios {
 
-    val rampUpTimeSecs = 60
+    val rampUpTimeSecs = 5
 
 	/*
 	 *	HTTP scenarios
      */
 
 	// Browse
-	val browse_guids = csv("accounts.csv").circular
+	val browse_guids = csv("accounts.csv").random
 	val scn_Browse = scenario("GetAccounts")
       .during(Conf.duration) {
 		feed(browse_guids)
