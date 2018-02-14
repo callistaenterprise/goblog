@@ -41,7 +41,7 @@ func main() {
 
 	initializeMessaging()
 	initializeTracing()
-	cb.ConfigureHystrix([]string{"accountservice->dataservice", "accountservice->imageservice", "accountservice->quotes-service"}, service.MessagingClient)
+	cb.ConfigureHystrix([]string{"account-to-data", "account-to-image", "account-to-quotes"}, service.MessagingClient)
 
 	handleSigterm(func() {
 		cb.Deregister(service.MessagingClient)

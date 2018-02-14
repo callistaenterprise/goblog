@@ -2,7 +2,6 @@ package service
 
 import (
 	"net/http"
-	 gqlhandler "github.com/graphql-go/graphql-go-handler"
 	"github.com/callistaenterprise/goblog/common/tracing"
 	"github.com/gorilla/mux"
 )
@@ -20,15 +19,6 @@ func NewRouter() *mux.Router {
 
 	}
 
-	initQL()
-
-	h := gqlhandler.New(&gqlhandler.Config{
-		Schema: &Schema,
-		Pretty: true,
-	})
-
-	router.Methods("POST").
-	Name("Graphql").Path("/graphql").Handler(h)
 	return router
 }
 

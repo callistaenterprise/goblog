@@ -156,7 +156,7 @@ func getQuote(ctx context.Context) internalmodel.Quote {
 
     // Create the http request and pass it to the circuit breaker
     req, err := http.NewRequest("GET", "http://quotes-service:8080/api/quote?strength=4", nil)
-    body, err := cb.PerformHTTPRequestCircuitBreaker(tracing.UpdateContext(ctx, child), "accountservice->quotes-service", req)
+    body, err := cb.PerformHTTPRequestCircuitBreaker(tracing.UpdateContext(ctx, child), "account-to-quotes", req)
     if err == nil {
         quote := internalmodel.Quote{}
         json.Unmarshal(body, &quote)
@@ -172,7 +172,7 @@ func getAccount(ctx context.Context, accountID string) (internalmodel.Account, e
 
     // Create the http request and pass it to the circuit breaker
     req, err := http.NewRequest("GET", "http://dataservice:7070/accounts/"+accountID, nil)
-    body, err := cb.PerformHTTPRequestCircuitBreaker(tracing.UpdateContext(ctx, child), "accountservice->dataservice", req)
+    body, err := cb.PerformHTTPRequestCircuitBreaker(tracing.UpdateContext(ctx, child), "account-to-data", req)
     if err == nil {
         accountData := model.AccountData{}
         json.Unmarshal(body, &accountData)
@@ -194,7 +194,7 @@ func getImageURL(ctx context.Context, accountID string) model.AccountImage {
     defer tracing.CloseSpan(child, "Client Receive")
 
     req, err := http.NewRequest("GET", "http://imageservice:7777/accounts/"+accountID, nil)
-    body, err := cb.PerformHTTPRequestCircuitBreaker(tracing.UpdateContext(ctx, child), "accountservice->imageservice", req)
+    body, err := cb.PerformHTTPRequestCircuitBreaker(tracing.UpdateContext(ctx, child), "account-to-image", req)
     if err == nil {
         accountImage := model.AccountImage{}
         err := json.Unmarshal(body, &accountImage)
