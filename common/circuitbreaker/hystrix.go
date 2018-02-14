@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/afex/hystrix-go/hystrix"
 	"github.com/callistaenterprise/goblog/common/messaging"
@@ -16,7 +17,6 @@ import (
 	"github.com/callistaenterprise/goblog/common/util"
 	"github.com/eapache/go-resiliency/retrier"
 	"github.com/spf13/viper"
-	"fmt"
 )
 
 func init() {
@@ -75,7 +75,7 @@ func PerformHTTPRequestCircuitBreaker(ctx context.Context, breakerName string, r
 		return out, nil
 
 	case err := <-errors:
-		logrus.Debugf("Got error on channel in breaker %v. Msg: %v", breakerName, err.Error())
+		logrus.Errorf("Got error on channel in breaker %v. Msg: %v", breakerName, err.Error())
 		return nil, err
 	}
 }
@@ -172,7 +172,7 @@ func resolveProperty(command string, prop string) int {
 func getDefaultHystrixConfigPropertyValue(prop string) int {
 	switch prop {
 	case "Timeout":
-		return 3000 //hystrix.DefaultTimeout
+		return 1000 //hystrix.DefaultTimeout
 	case "MaxConcurrentRequests":
 		return 200 //hystrix.DefaultMaxConcurrent
 	case "RequestVolumeThreshold":
