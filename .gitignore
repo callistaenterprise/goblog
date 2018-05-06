@@ -46,6 +46,8 @@ dataservice/healthchecker-linux-amd64
 dataservice/dataservice-linux-amd64
 dataservice/dataservice
 
+dbloadtest/logs/*.*
+
 build
 .gradle
 
@@ -53,3 +55,7 @@ token.txt
 
 loadtest/loadtest
 loadtest/target
+
+dbloadtest/logs
+dbloadtest/dbloadtest
+dbloadtest/target

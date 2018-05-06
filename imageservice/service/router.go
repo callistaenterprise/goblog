@@ -22,14 +22,14 @@ func NewRouter() *mux.Router {
 			Methods(route.Method).
 			Path(route.Pattern).
 			Name(route.Name).
-			Handler(loadTracing(handler))
+			Handler(loadTracing(handler, route.Name))
 	}
 	return router
 }
 
-func loadTracing(next http.Handler) http.Handler {
+func loadTracing(next http.Handler, name string) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		span := tracing.StartHTTPTrace(req, "imageservice")
+		span := tracing.StartHTTPTrace(req, name)
 		defer span.Finish()
 
 		ctx := tracing.UpdateContext(req.Context(), span)

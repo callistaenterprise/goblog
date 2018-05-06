@@ -15,12 +15,41 @@ type Routes []Route
 
 // Initialize our routes
 var routes = Routes{
-
+	Route{
+		"GetAccountByNameWithCount", // Name
+		"GET", // HTTP method
+		"/accountsbyname/{accountName}", // Route pattern
+		GetAccountByNameWithCount,
+	},
 	Route{
 		"GetAccount", // Name
 		"GET",        // HTTP method
 		"/accounts/{accountId}", // Route pattern
 		GetAccount,
+	},
+	Route{
+		"StoreAccount", // Name
+		"POST",         // HTTP method
+		"/accounts",    // Route pattern
+		StoreAccount,
+	},
+	Route{
+		"UpdateAccount", // Name
+		"PUT",           // HTTP method
+		"/accounts",     // Route pattern
+		UpdateAccount,
+	},
+	Route{
+		"RandomAccount", // Name
+		"GET",        // HTTP method
+		"/random", // Route pattern
+		RandomAccount,
+	},
+	Route{
+		"Seed", // Name
+		"GET",        // HTTP method
+		"/seed", // Route pattern
+		SeedAccounts,
 	},
 	Route{
 		"HealthCheck",

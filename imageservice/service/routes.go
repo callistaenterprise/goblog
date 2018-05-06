@@ -18,12 +18,6 @@ var routes = Routes{
 
 	Route{
 		"ProcessImage",
-		"POST",
-		"/image",
-		ProcessImage,
-	},
-	Route{
-		"ProcessImage",
 		"GET",
 		"/file/{filename}",
 		ProcessImageFromFile,
@@ -33,6 +27,18 @@ var routes = Routes{
 		"GET",
 		"/accounts/{accountId}",
 		GetAccountImage,
+	},
+	Route{
+		"UpdateAccountImage",
+		"PUT",
+		"/accounts",
+		UpdateAccountImage,
+	},
+	Route{
+		"CreateAccountImage",
+		"POST",
+		"/accountS",
+		CreateAccountImage,
 	},
 	Route{
 		"HealthCheck",

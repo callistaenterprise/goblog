@@ -10,13 +10,15 @@ import (
 	"strconv"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/callistaenterprise/goblog/common/messaging"
+	"github.com/callistaenterprise/goblog/common/model"
 	"github.com/callistaenterprise/goblog/common/util"
+	"github.com/callistaenterprise/goblog/imageservice/dbclient"
 	"github.com/gorilla/mux"
-	"github.com/spf13/viper"
+	"io/ioutil"
 )
 
-var MessagingClient messaging.IMessagingClient
+// DBClient is our GORM instance.
+var DBClient dbclient.IGormClient
 
 var myIp string
 
@@ -28,34 +30,62 @@ func init() {
 	}
 }
 
-/**
- * Takes the POST body, decodes, processes and finally writes the result to the response.
- */
-func ProcessImage(w http.ResponseWriter, r *http.Request) {
-
-	sourceImage, _, err := image.Decode(r.Body)
+func CreateAccountImage(w http.ResponseWriter, r *http.Request) {
+	body, err := ioutil.ReadAll(r.Body)
+	accountImage := model.AccountImage{}
+	err = json.Unmarshal(body, &accountImage)
 	if err != nil {
 		writeServerError(w, err.Error())
 		return
 	}
-	writeAndReturn(w, sourceImage)
+
+	accountImage, err = DBClient.StoreAccountImage(r.Context(), accountImage)
+	if err != nil {
+		writeServerError(w, err.Error())
+		return
+	}
+	respData, _ := json.Marshal(&accountImage)
+	writeAndReturn(w, respData)
+}
+
+func UpdateAccountImage(w http.ResponseWriter, r *http.Request) {
+	body, err := ioutil.ReadAll(r.Body)
+	accountImage := model.AccountImage{}
+	err = json.Unmarshal(body, &accountImage)
+	if err != nil {
+		writeServerError(w, err.Error())
+		return
+	}
+	if accountImage.ID == "" {
+		writeServerError(w, "No ID supplied")
+		return
+	}
+
+	accountImage, err = DBClient.StoreAccountImage(r.Context(), accountImage)
+	if err != nil {
+		writeServerError(w, err.Error())
+		return
+	}
+	respData, _ := json.Marshal(&accountImage)
+	writeAndReturn(w, respData)
 }
 
 func GetAccountImage(w http.ResponseWriter, r *http.Request) {
-	accountImage := AccountImage{
-		URL:      viper.GetString("image_url"),
-		ServedBy: myIp,
-	}
+	accountImage, err := DBClient.QueryAccountImage(r.Context(), mux.Vars(r)["accountId"])
+	accountImage.ServedBy = myIp
 	data, err := json.Marshal(&accountImage)
 	if err != nil {
 		writeServerError(w, err.Error())
 	} else {
-		w.Header().Set("Content-Type", "text/plain")
-		w.Header().Set("Content-Length", strconv.Itoa(len(data)))
-		w.WriteHeader(http.StatusOK)
-		w.Write(data)
+		writeResponse(w, data)
 	}
 
+}
+func writeResponse(w http.ResponseWriter, data []byte) {
+	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
+	w.WriteHeader(http.StatusOK)
+	w.Write(data)
 }
 
 /**
@@ -79,12 +109,8 @@ func ProcessImageFromFile(w http.ResponseWriter, r *http.Request) {
 		writeServerError(w, err.Error())
 		return
 	}
-	writeAndReturn(w, sourceImage)
-}
-
-func writeAndReturn(w http.ResponseWriter, sourceImage image.Image) {
 	buf := new(bytes.Buffer)
-	err := Sepia(sourceImage, buf)
+	err = Sepia(sourceImage, buf)
 
 	if err != nil {
 		fmt.Println(err.Error())
@@ -92,12 +118,15 @@ func writeAndReturn(w http.ResponseWriter, sourceImage image.Image) {
 		return
 	}
 	outputData := buf.Bytes()
+	writeAndReturn(w, outputData)
+}
+
+func writeAndReturn(w http.ResponseWriter, outputData []byte) {
 
 	w.Header().Set("Content-Type", "image/jpeg")
 	w.Header().Set("Content-Length", strconv.Itoa(len(outputData)))
 	w.WriteHeader(http.StatusOK)
 	w.Write(outputData)
-
 }
 
 func writeServerError(w http.ResponseWriter, msg string) {
@@ -105,10 +134,4 @@ func writeServerError(w http.ResponseWriter, msg string) {
 	w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
 	w.WriteHeader(http.StatusInternalServerError)
 	w.Write([]byte(msg))
-}
-
-// AccountImage
-type AccountImage struct {
-	URL      string `json:"url"`
-	ServedBy string `json:"servedBy"`
 }

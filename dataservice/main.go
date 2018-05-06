@@ -7,16 +7,14 @@ import (
 	"syscall"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/callistaenterprise/goblog/common/config"
+	"github.com/callistaenterprise/goblog/common/tracing"
 	"github.com/callistaenterprise/goblog/dataservice/dbclient"
 	"github.com/callistaenterprise/goblog/dataservice/service"
-	cb "github.com/callistaenterprise/goblog/common/circuitbreaker"
-	"github.com/callistaenterprise/goblog/common/config"
-	"github.com/callistaenterprise/goblog/common/messaging"
-	"github.com/callistaenterprise/goblog/common/tracing"
 	"github.com/spf13/viper"
 )
 
-var appName = "accountservice"
+var appName = "dataservice"
 
 func init() {
 	profile := flag.String("profile", "test", "Environment profile, something similar to spring profiles")
@@ -42,30 +40,18 @@ func main() {
 
 	service.DBClient = &dbclient.GormClient{}
 	service.DBClient.SetupDB(viper.GetString("cockroachdb_conn_url"))
-	service.DBClient.SeedAccounts()
-	defer service.DBClient.Close()
+	// service.DBClient.SeedAccounts()
 
-	initializeMessaging()
 	initializeTracing()
 
 	handleSigterm(func() {
-		cb.Deregister(service.MessagingClient)
-		service.MessagingClient.Close()
+		logrus.Infoln("Captured Ctrl+C")
+		service.DBClient.Close()
 	})
 	service.StartWebServer(viper.GetString("server_port"))
 }
 func initializeTracing() {
 	tracing.InitTracing(viper.GetString("zipkin_server_url"), appName)
-}
-
-func initializeMessaging() {
-	if !viper.IsSet("amqp_server_url") {
-		panic("No 'amqp_server_url' set in configuration, cannot start")
-	}
-
-	service.MessagingClient = &messaging.AmqpClient{}
-	service.MessagingClient.ConnectToBroker(viper.GetString("amqp_server_url"))
-	service.MessagingClient.Subscribe(viper.GetString("config_event_bus"), "topic", appName, config.HandleRefreshEvent)
 }
 
 // Handles Ctrl+C or most other means of "controlled" shutdown gracefully. Invokes the supplied func before exiting.

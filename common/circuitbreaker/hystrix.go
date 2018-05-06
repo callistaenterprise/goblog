@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/afex/hystrix-go/hystrix"
 	"github.com/callistaenterprise/goblog/common/messaging"
@@ -16,7 +17,6 @@ import (
 	"github.com/callistaenterprise/goblog/common/util"
 	"github.com/eapache/go-resiliency/retrier"
 	"github.com/spf13/viper"
-	"fmt"
 )
 
 func init() {
@@ -75,7 +75,7 @@ func PerformHTTPRequestCircuitBreaker(ctx context.Context, breakerName string, r
 		return out, nil
 
 	case err := <-errors:
-		logrus.Debugf("Got error on channel in breaker %v. Msg: %v", breakerName, err.Error())
+		logrus.Errorf("Got error on channel in breaker %v. Msg: %v", breakerName, err.Error())
 		return nil, err
 	}
 }
@@ -86,7 +86,6 @@ func callWithRetries(req *http.Request, output chan []byte) error {
 	attempt := 0
 	err := r.Run(func() error {
 		attempt++
-		logrus.Infof("Retrier calling: %v\n", req)
 		resp, err := Client.Do(req)
 		if err == nil && resp.StatusCode < 299 {
 			responseBody, err := ioutil.ReadAll(resp.Body)
@@ -141,6 +140,7 @@ func Deregister(amqpClient messaging.IMessagingClient) {
 	}
 	bytes, _ := json.Marshal(token)
 	amqpClient.PublishOnQueue(bytes, "discovery")
+	logrus.Infoln("Sent deregistration token over SpringCloudBus")
 }
 
 func publishDiscoveryToken(amqpClient messaging.IMessagingClient) {
@@ -172,9 +172,9 @@ func resolveProperty(command string, prop string) int {
 func getDefaultHystrixConfigPropertyValue(prop string) int {
 	switch prop {
 	case "Timeout":
-		return hystrix.DefaultTimeout
+		return 1000 //hystrix.DefaultTimeout
 	case "MaxConcurrentRequests":
-		return hystrix.DefaultMaxConcurrent
+		return 200 //hystrix.DefaultMaxConcurrent
 	case "RequestVolumeThreshold":
 		return hystrix.DefaultVolumeThreshold
 	case "SleepWindow":

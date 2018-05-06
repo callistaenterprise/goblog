@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+	<appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder>
+			<pattern>%d{HH:mm:ss.SSS} [%-5level] %logger{15} - %msg%n%rEx</pattern>
+			<immediateFlush>false</immediateFlush>
+		</encoder>
+	</appender>
+
+	<appender name="FILE" class="ch.qos.logback.core.FileAppender">
+		<file>logs/testFile.log</file>
+		<append>true</append>
+		<!-- encoders are assigned the type
+			 ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
+		<encoder>
+			<pattern>%-4relative [%thread] %-5level %logger{35} - %msg%n</pattern>
+		</encoder>
+	</appender>
+
+
+	<!-- Uncomment for logging ALL HTTP request and responses -->
+	 <!--	<logger name="com.excilys.ebi.gatling.http" level="TRACE" />  -->
+	<!-- Uncomment for logging ONLY FAILED HTTP request and responses -->
+	<!--		<logger name="com.excilys.ebi.gatling.http" level="DEBUG" /> -->
+
+<root level="WARN">
+  <appender-ref ref="FILE" />
+</root>
+
+</configuration>

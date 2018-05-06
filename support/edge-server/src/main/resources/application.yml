@@ -55,7 +55,9 @@ zuul:
     accountservicehealth:
       path: /accounts/health
       url:  http://accountservice:6767/health
-
+    graphql:
+      path: /graphql/**
+      url: http://accountservice:6767/graphql
 
 hystrix:
   threadpool:
