@@ -40,6 +40,18 @@ var routes = Routes{
 		UpdateAccount,
 	},
 	Route{
+		"RandomAccount", // Name
+		"GET",        // HTTP method
+		"/random", // Route pattern
+		RandomAccount,
+	},
+	Route{
+		"Seed", // Name
+		"GET",        // HTTP method
+		"/seed", // Route pattern
+		SeedAccounts,
+	},
+	Route{
 		"HealthCheck",
 		"GET",
 		"/health",

@@ -25,3 +25,8 @@ From /goblog
 ### Deploy microservices
 
     ./copyall.sh
+
+### Running the CockroachDB client
+Find a container running the _cockroachdb/cockroach_ container using _docker ps_ and note the container ID. Then we'll use _docker exec_ to launch the SQL CLI:  
+   
+    > docker exec -it 10f4b6c727f8 ./cockroach sql --insecure

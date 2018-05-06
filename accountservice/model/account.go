@@ -20,7 +20,7 @@ type Account struct {
 // Quote defines a Quote as provided by the quotes-service
 type Quote struct {
     Text     string `json:"quote"`
-    ServedBy string `json:"ipAddress"`
+    ServedBy string `json:"l"`
     Language string `json:"language"`
 }
 

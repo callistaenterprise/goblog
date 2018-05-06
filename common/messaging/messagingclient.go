@@ -110,7 +110,7 @@ func (m *AmqpClient) PublishOnQueueWithContext(ctx context.Context, body []byte,
 		false,      // mandatory
 		false,      // immediate
 		buildMessage(ctx, body))
-	logrus.Infof("A message was sent to queue %v: %v", queueName, string(body))
+	logrus.Debugf("A message was sent to queue %v: %v", queueName, string(body))
 	return err
 }
 

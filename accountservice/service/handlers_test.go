@@ -15,6 +15,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"gopkg.in/h2non/gock.v1"
 	"github.com/callistaenterprise/goblog/common/circuitbreaker"
+	"io/ioutil"
+	"strings"
 )
 
 var mockMessagingClient *messaging.MockMessagingClient
@@ -182,6 +184,54 @@ func TestHealthCheckOk(t *testing.T) {
 			NewRouter().ServeHTTP(resp, req)
 			Convey("Then expect 200 OK", func() {
 				So(resp.Code, ShouldEqual, 200)
+			})
+		})
+	})
+}
+
+// Tests the /ql graphQL endpoint
+func TestQueryAccountUsingGraphQL(t *testing.T) {
+	tracing.SetTracer(opentracing.NoopTracer{})
+	initQL(&TestGraphQLResolvers{})
+
+	query := "{Account(id:\"123\"){id,name,quote(language:\"sv\"){quote,language}}}"
+
+	Convey("Given a GraphQL request for {Account{id,name}}", t, func() {
+		req := httptest.NewRequest("POST", "/graphql", strings.NewReader(query))
+		req.Header.Add("Content-Type", "application/graphql")
+		resp := httptest.NewRecorder()
+
+		Convey("When the request is handled by the Router", func() {
+			NewRouter().ServeHTTP(resp, req)
+
+			Convey("Then the response should be a 200", func() {
+				So(resp.Code, ShouldEqual, 200)
+				body, _ := ioutil.ReadAll(resp.Body)
+				So(string(body), ShouldEqual, `{"data":{"Account":{"id":"123","name":"Test Testsson 3","quote":{"language":"sv","quote":"HEJ"}}}}`)
+			})
+		})
+	})
+}
+
+// Tests the /ql graphQL endpoint
+func TestQueryAccountSmallUsingGraphQL(t *testing.T) {
+	tracing.SetTracer(opentracing.NoopTracer{})
+	initQL(&TestGraphQLResolvers{})
+
+	query := "{Account(id:\"123\"){id}}"
+
+	Convey("Given a GraphQL request for {Account{id,name}}", t, func() {
+		req := httptest.NewRequest("POST", "/graphql", strings.NewReader(query))
+		req.Header.Add("Content-Type", "application/graphql")
+		resp := httptest.NewRecorder()
+
+		Convey("When the request is handled by the Router", func() {
+			NewRouter().ServeHTTP(resp, req)
+
+			Convey("Then the response should be a 200", func() {
+				So(resp.Code, ShouldEqual, 200)
+				body, _ := ioutil.ReadAll(resp.Body)
+				So(string(body), ShouldEqual, `{"data":{"Account":{"id":"123"}}}`)
 			})
 		})
 	})

@@ -24,7 +24,7 @@ import (
 // MessagingClient instance
 var MessagingClient messaging.IMessagingClient
 
-var myIp string
+var myIP string
 var isHealthy = true
 var client = &http.Client{}
 
@@ -40,9 +40,9 @@ func init() {
     client.Transport = transport
     cb.Client = *client
     var err error
-    myIp, err = util.ResolveIPFromHostsFile()
+    myIP, err = util.ResolveIPFromHostsFile()
     if err != nil {
-        myIp = util.GetIP()
+        myIP = util.GetIP()
     }
     fmt.Println("Init method executed")
 }
@@ -97,7 +97,7 @@ func UpdateAccount(w http.ResponseWriter, r *http.Request) {
         json.Unmarshal(respData, &accountData)
         account.Name = accountData.Name
         account.AccountEvents = accountData.Events
-        account.ServedBy = myIp
+        account.ServedBy = myIP
         outData, _ := json.Marshal(&account)
         writeJSONResponse(w, resp.StatusCode, outData)
     } else {
@@ -123,13 +123,28 @@ func GetAccount(w http.ResponseWriter, r *http.Request) {
     }
     account.Quote = getQuote(r.Context())
     account.ImageData = getImageURL(r.Context(), accountID)
-    account.ServedBy = myIp
+    account.ServedBy = myIP
 
     notifyVIP(r.Context(), account) // Send VIP notification concurrently.
 
     // If found, marshal into JSON, write headers and content
     data, _ := json.Marshal(account)
     writeJSONResponse(w, http.StatusOK, data)
+}
+
+func fetchAccount(ctx context.Context, accountID string) (internalmodel.Account, error) {
+    account, err := getAccount(ctx, accountID)
+    if err != nil {
+        return account, err
+    }
+    account.Quote = getQuote(ctx)
+    account.ImageData = getImageURL(ctx, accountID)
+    account.ServedBy = myIP
+
+    notifyVIP(ctx, account) // Send VIP notification concurrently.
+
+    // If found, marshal into JSON, write headers and content
+    return account, nil
 }
 
 // If our hard-coded "VIP" account, spawn a goroutine to send a message.
@@ -177,10 +192,9 @@ func getAccount(ctx context.Context, accountID string) (internalmodel.Account, e
         accountData := model.AccountData{}
         json.Unmarshal(body, &accountData)
         return toAccount(accountData), nil
-    } else {
-        logrus.Errorf("Error: %v\n", err.Error())
-        return internalmodel.Account{}, err
     }
+    logrus.Errorf("Error: %v\n", err.Error())
+    return internalmodel.Account{}, err
 }
 
 func toAccount(accountData model.AccountData) internalmodel.Account {
@@ -200,10 +214,8 @@ func getImageURL(ctx context.Context, accountID string) model.AccountImage {
         err := json.Unmarshal(body, &accountImage)
         if err == nil {
             return accountImage
-        } else {
-            panic("Unmarshalling accountImage struct went really bad. Msg: " + err.Error())
         }
-
+        panic("Unmarshalling accountImage struct went really bad. Msg: " + err.Error())
     }
     return model.AccountImage{URL: "http://path.to.placeholder", ServedBy: "fallback"}
 }

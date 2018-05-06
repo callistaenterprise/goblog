@@ -17,6 +17,7 @@ type IGormClient interface {
     UpdateAccount(ctx context.Context, accountData model.AccountData) (model.AccountData, error)
     StoreAccount(ctx context.Context, accountData model.AccountData) (model.AccountData, error)
     QueryAccount(ctx context.Context, accountId string) (model.AccountData, error)
+    GetRandomAccount(ctx context.Context) (model.AccountData, error)
     QueryAccountByNameWithCount(ctx context.Context, name string) ([]Pair, error)
     SetupDB(addr string)
     SeedAccounts() error
@@ -109,6 +110,26 @@ func (gc *GormClient) QueryAccount(ctx context.Context, accountId string) (model
     return acc, nil
 }
 
+func (gc *GormClient) GetRandomAccount(ctx context.Context) (model.AccountData, error) {
+    span := tracing.StartChildSpanFromContext(ctx, "GormClient.GetRandomAccount")
+    defer span.Finish()
+
+    if gc.crDB == nil {
+        return model.AccountData{}, fmt.Errorf("connection to DB not established!")
+    }
+    tx := gc.crDB.Begin()
+    acc := model.AccountData{}
+    tx = tx.Preload("Events").First(&acc)
+    if tx.Error != nil {
+        return acc, tx.Error
+    }
+    if acc.ID == "" {
+        return acc, fmt.Errorf("no random account found")
+    }
+    tx.Commit()
+    return acc, nil
+}
+
 func (gc *GormClient) QueryAccountByNameWithCount(ctx context.Context, name string) ([]Pair, error) {
 
     rows, err := gc.crDB.Table("account_data as ad").
@@ -184,6 +205,11 @@ func (m *MockGormClient) UpdateAccount(ctx context.Context, accountData model.Ac
 
 func (m *MockGormClient) QueryAccount(ctx context.Context, accountId string) (model.AccountData, error) {
     args := m.Mock.Called(ctx, accountId)
+    return args.Get(0).(model.AccountData), args.Error(1)
+}
+
+func (m *MockGormClient) GetRandomAccount(ctx context.Context) (model.AccountData, error) {
+    args := m.Mock.Called(ctx)
     return args.Get(0).(model.AccountData), args.Error(1)
 }
 
