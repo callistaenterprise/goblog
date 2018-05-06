@@ -227,6 +227,7 @@ func HealthCheck(w http.ResponseWriter, r *http.Request) {
     if dbUp && isHealthy {
         data, _ := json.Marshal(healthCheckResponse{Status: "UP"})
         writeJSONResponse(w, http.StatusOK, data)
+        logrus.Infoln("Wrote health respo OK")
     } else {
         data, _ := json.Marshal(healthCheckResponse{Status: "Database unaccessible"})
         writeJSONResponse(w, http.StatusServiceUnavailable, data)

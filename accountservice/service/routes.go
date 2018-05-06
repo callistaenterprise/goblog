@@ -3,6 +3,7 @@ package service
 import (
 	"net/http"
 	gqlhandler "github.com/graphql-go/graphql-go-handler"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // Route defines a single route, e.g. a human readable name, HTTP method, pattern the function that will execute when the route is called.
@@ -57,5 +58,11 @@ var routes = Routes{
 		"GET",
 		"/testability/healthy/{state}",
 		SetHealthyState,
+	},
+	Route{
+		"Prometheus",
+		"GET",
+		"/metrics",
+		promhttp.Handler().ServeHTTP,
 	},
 }
