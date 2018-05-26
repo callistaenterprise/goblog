@@ -12,6 +12,7 @@ type Route struct {
 	Method      string
 	Pattern     string
 	HandlerFunc http.HandlerFunc
+	Monitor     bool
 }
 
 // Routes defines the type Routes which is just an array (slice) of Route structs.
@@ -25,18 +26,21 @@ var routes = Routes{
 		"POST",         // HTTP method
 		"/accounts",    // Route pattern
 		StoreAccount,
+		true,
 	},
 	Route{
 		"UpdateAccount", // Name
 		"PUT",           // HTTP method
 		"/accounts",     // Route pattern
 		UpdateAccount,
+		true,
 	},
 	Route{
 		"GetAccount",            // Name
 		"GET",                   // HTTP method
 		"/accounts/{accountId}", // Route pattern
 		GetAccount,
+		true,
 	},
 	Route{
 		"GraphQL",  // Name
@@ -46,23 +50,27 @@ var routes = Routes{
 			Schema: &schema,
 			Pretty: false,
 		}).ServeHTTP,
+		true,
 	},
 	Route{
 		"HealthCheck",
 		"GET",
 		"/health",
 		HealthCheck,
+		false,
 	},
 	Route{
 		"Testability",
 		"GET",
 		"/testability/healthy/{state}",
 		SetHealthyState,
+		false,
 	},
 	Route{
 		"Prometheus",
 		"GET",
 		"/metrics",
 		promhttp.Handler().ServeHTTP,
+		false,
 	},
 }
