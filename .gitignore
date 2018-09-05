@@ -46,6 +46,10 @@ dataservice/healthchecker-linux-amd64
 dataservice/dataservice-linux-amd64
 dataservice/dataservice
 
+swarm-prometheus-discovery/swarm-prometheus-discovery-linux-amd64
+swarm-prometheus-discovery/swarm-prometheus-discovery
+swarm-prometheus-discovery
+
 build
 .gradle
 

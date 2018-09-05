@@ -21,7 +21,7 @@ func NewRouter() *mux.Router {
 	for _, route := range routes {
 		//allRoutes = append(allRoutes, strings.ToLower(route.Name))
 		if route.Monitor {
-			metricMap[route.Name] = buildMetric(route.Name, route.Method + " " + route.Pattern)
+			metricMap[route.Name] = buildSummaryVec(route.Name, route.Method + " " + route.Pattern)
 			histogramMap[route.Name] = buildHistogram(route.Name + "_histogram", route.Method + " " + route.Pattern)
 		}
 	}
@@ -36,10 +36,6 @@ func NewRouter() *mux.Router {
 	logrus.Infoln("Successfully initialized routes including Prometheus.")
 	return router
 }
-
-
-
-
 
 func loadTracing(next http.Handler, route Route) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {

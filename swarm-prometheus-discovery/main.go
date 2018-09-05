@@ -2,25 +2,24 @@ package main
 
 import (
 	"encoding/json"
-	"log"
-	"sync"
-	"github.com/fsouza/go-dockerclient"
-	"fmt"
 	"flag"
-	"strings"
-	"os"
+	"fmt"
 	"github.com/Sirupsen/logrus"
-	"time"
 	"github.com/docker/docker/api/types/swarm"
+	"github.com/fsouza/go-dockerclient"
+	"log"
+	"os"
+	"strings"
+	"sync"
+	"time"
 )
 
-var filters = make(map[string][]string)
+var filters = map[string][]string{"desired-state": {"running"}}
 var networkID = ""
 var networkName = ""
 var ignoredServices = make([]string, 0)
 
 func init() {
-	filters["desired-state"] = []string{"running"}
 	networkName = *flag.String("network", "my_network", "Specify the name of the network you want to scrape")
 	ignoredServicesStr := *flag.String("ignoredServices", "prometheus", "Comma-separated list of service names we do not want to scrape")
 	// Stuff any services we don't want to scrape (such as ourselves and prometheus server)
@@ -89,10 +88,9 @@ func pollTasks(client *docker.Client) {
 	tasksMap := make(map[string]*ScrapedTask)
 
 	for _, task := range tasks {
-		taskServiceId := task.ServiceID
 
 		// Lookup service
-		service, _ := client.InspectService(taskServiceId)
+		service, _ := client.InspectService(task.ServiceID)
 
 		// Skip if service is in ignoredList, e.g. don't scrape prometheus...
 		if isInIgnoredList(service.Spec.Name) {
@@ -117,10 +115,10 @@ func pollTasks(client *docker.Client) {
 
 			// Only extract IP if on expected network.
 			if netw.Network.ID == networkID {
-				if taskEntry, ok := tasksMap[taskServiceId]; ok {
+				if taskEntry, ok := tasksMap[task.ServiceID]; ok {
 					processExistingTask(taskEntry, netw, portNumber, service)
 				} else {
-					processNewTask(netw, portNumber, service, tasksMap, taskServiceId)
+					processNewTask(netw, portNumber, service, tasksMap)
 				}
 			}
 		}
@@ -140,21 +138,21 @@ func pollTasks(client *docker.Client) {
 
 	file, err := os.Create("/etc/swarm-endpoints/swarm-endpoints.json")
 	if err != nil {
-		fmt.Errorf("Error writing file: %v\n", err.Error())
+		logrus.Errorf("Error writing file: %v\n", err.Error())
 		panic(err.Error())
 	}
 	file.Write(bytes)
 	file.Close()
 }
 
-func processNewTask(netw swarm.NetworkAttachment, portNumber string, service *swarm.Service, tasksMap map[string]*ScrapedTask, taskServiceId string) {
+func processNewTask(netw swarm.NetworkAttachment, portNumber string, service *swarm.Service, tasksMap map[string]*ScrapedTask) {
 	// New task
 	taskEntry := ScrapedTask{Targets: make([]string, 0), Labels: make(map[string]string)}
 	for _, adr := range netw.Addresses {
 		taskEntry.Targets = append(taskEntry.Targets, formatIp(adr, portNumber))
 	}
 	taskEntry.Labels["task"] = service.Spec.Name
-	tasksMap[taskServiceId] = &taskEntry
+	tasksMap[service.ID] = &taskEntry
 }
 
 func processExistingTask(taskEntry *ScrapedTask, netw swarm.NetworkAttachment, portNumber string, service *swarm.Service) {

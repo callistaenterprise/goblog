@@ -2,22 +2,13 @@ package service
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
-	"flag"
 	"time"
 	"net/http"
 	"github.com/spf13/viper"
 )
 
-var (
-	addr              = flag.String("listen-address", ":8080", "The address to listen on for HTTP requests.")
-	uniformDomain     = flag.Float64("uniform.domain", 0.0002, "The domain for the uniform distribution.")
-	normDomain        = flag.Float64("normal.domain", 0.0002, "The domain for the normal distribution.")
-	normMean          = flag.Float64("normal.mean", 0.00001, "The mean for the normal distribution.")
-	oscillationPeriod = flag.Duration("oscillation-period", 10*time.Minute, "The duration of the rate oscillation period.")
-)
-
-func buildMetric(metricName string, metricHelp string) *prometheus.SummaryVec {
-	rpcDuration := prometheus.NewSummaryVec(
+func buildSummaryVec(metricName string, metricHelp string) *prometheus.SummaryVec {
+	summaryVec := prometheus.NewSummaryVec(
 		prometheus.SummaryOpts{
 			Namespace: viper.GetString("service_name"),
 			Name:      metricName,
@@ -25,9 +16,8 @@ func buildMetric(metricName string, metricHelp string) *prometheus.SummaryVec {
 		},
 		[]string{"service"},
 	)
-	prometheus.Register(rpcDuration)
-
-	return rpcDuration
+	prometheus.Register(summaryVec)
+	return summaryVec
 }
 
 func buildHistogram(metricName string, metricHelp string) prometheus.Histogram {
