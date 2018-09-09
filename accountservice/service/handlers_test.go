@@ -8,13 +8,13 @@ import (
 
 	"context"
 	internalmodel "github.com/callistaenterprise/goblog/accountservice/model"
+	"github.com/callistaenterprise/goblog/common/circuitbreaker"
 	"github.com/callistaenterprise/goblog/common/messaging"
 	"github.com/callistaenterprise/goblog/common/tracing"
 	"github.com/opentracing/opentracing-go"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/stretchr/testify/mock"
 	"gopkg.in/h2non/gock.v1"
-	"github.com/callistaenterprise/goblog/common/circuitbreaker"
 	"io/ioutil"
 	"strings"
 )
@@ -49,7 +49,6 @@ func TestGetAccount(t *testing.T) {
 		Get("/accounts/10000").
 		Reply(200).
 		BodyString(`{"imageUrl":"http://test.path"}`)
-
 
 	Convey("Given a HTTP request for /accounts/123", t, func() {
 		req := httptest.NewRequest("GET", "/accounts/123", nil)

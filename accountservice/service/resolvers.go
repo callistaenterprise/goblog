@@ -1,9 +1,9 @@
 package service
 
 import (
-	"github.com/graphql-go/graphql"
 	"fmt"
 	"github.com/Sirupsen/logrus"
+	"github.com/graphql-go/graphql"
 )
 
 type GraphQLResolvers interface {
@@ -12,7 +12,6 @@ type GraphQLResolvers interface {
 
 // LiveGraphQLResolvers implementations
 type LiveGraphQLResolvers struct {
-
 }
 
 func (gqlres *LiveGraphQLResolvers) AccountResolverFunc(p graphql.ResolveParams) (interface{}, error) {
@@ -29,7 +28,6 @@ func (gqlres *LiveGraphQLResolvers) AllAccountsResolverFunc(p graphql.ResolvePar
 
 // TestGraphQLResolvers test implementations
 type TestGraphQLResolvers struct {
-
 }
 
 func (gqlres *TestGraphQLResolvers) AccountResolverFunc(p graphql.ResolveParams) (interface{}, error) {
@@ -47,4 +45,3 @@ func (gqlres *TestGraphQLResolvers) AllAccountsResolverFunc(p graphql.ResolvePar
 	logrus.Infof("ENTER - resolve function for AllAccounts with params %v", p.Args)
 	return accounts, nil
 }
-

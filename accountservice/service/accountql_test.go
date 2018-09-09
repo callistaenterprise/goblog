@@ -1,10 +1,10 @@
 package service
 
 import (
-	. "github.com/smartystreets/goconvey/convey"
-	"testing"
 	"encoding/json"
 	"github.com/graphql-go/graphql"
+	. "github.com/smartystreets/goconvey/convey"
+	"testing"
 )
 
 // ffd508b5-5f87-4246-9867-ead4ecb01357

@@ -2,9 +2,10 @@ package service
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
-	"time"
-	"net/http"
 	"github.com/spf13/viper"
+	"net/http"
+	"strconv"
+	"time"
 )
 
 func buildSummaryVec(metricName string, metricHelp string) *prometheus.SummaryVec {
@@ -20,18 +21,18 @@ func buildSummaryVec(metricName string, metricHelp string) *prometheus.SummaryVe
 	return summaryVec
 }
 
-func buildHistogram(metricName string, metricHelp string) prometheus.Histogram {
-	histogram := prometheus.NewHistogram(prometheus.HistogramOpts{
-		Namespace: viper.GetString("service_name"),
-		Name:      metricName,
-		Help:      metricHelp,
-		Buckets:   prometheus.LinearBuckets(0, 0.001, 20),
-	})
-	prometheus.Register(histogram)
-	return histogram
-}
+//func buildHistogram(metricName string, metricHelp string) prometheus.Histogram {
+//	histogram := prometheus.NewHistogram(prometheus.HistogramOpts{
+//		Namespace: viper.GetString("service_name"),
+//		Name:      metricName,
+//		Help:      metricHelp,
+//		Buckets:   prometheus.LinearBuckets(0, 0.001, 20),
+//	})
+//	prometheus.Register(histogram)
+//	return histogram
+//}
 
-func measure(next http.Handler, route Route) http.Handler {
+func withMonitoring(next http.Handler, route Route) http.Handler {
 
 	// Just return the next handler if route shouldn't be monitored
 	if !route.Monitor {
@@ -42,12 +43,17 @@ func measure(next http.Handler, route Route) http.Handler {
 		start := time.Now()
 		next.ServeHTTP(rw, req)
 		duration := time.Since(start)
-		// Get duration holders
-		metric := metricMap[route.Name]
-		histogram := histogramMap[route.Name]
 
-		// Store values.
-		metric.WithLabelValues("normal").Observe(duration.Seconds())
-		histogram.Observe(duration.Seconds())
+		// Get summary holder
+		summary := summaryMap[route.Name]
+
+		// Store duration of request
+		summary.WithLabelValues("duration").Observe(duration.Seconds())
+
+		// Store size of response, if possible.
+		size, err := strconv.Atoi(rw.Header().Get("Content-Length"))
+		if err == nil {
+			summary.WithLabelValues("size").Observe(float64(size))
+		}
 	})
 }

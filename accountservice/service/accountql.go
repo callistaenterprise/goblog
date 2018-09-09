@@ -1,17 +1,18 @@
 package service
 
 import (
-	"github.com/graphql-go/graphql"
-	"log"
 	"github.com/Sirupsen/logrus"
 	internalmodel "github.com/callistaenterprise/goblog/accountservice/model"
 	"github.com/callistaenterprise/goblog/common/model"
+	"github.com/graphql-go/graphql"
+	"log"
 	"strconv"
 	"time"
 )
 
 var schema graphql.Schema
 var schemaInitialized = false
+
 // define custom GraphQL ObjectType `todoType` for our Golang struct `Todo`
 // Note that
 // - the fields in our todoType maps with the json tags for the fields in our struct
