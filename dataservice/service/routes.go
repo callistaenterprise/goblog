@@ -1,57 +1,56 @@
 package service
 
-import "net/http"
-
-// Route defines a single route, e.g. a human readable name, HTTP method, pattern the function that will execute when the route is called.
-type Route struct {
-	Name        string
-	Method      string
-	Pattern     string
-	HandlerFunc http.HandlerFunc
-}
-
-// Routes defines the type Routes which is just an array (slice) of Route structs.
-type Routes []Route
+import (
+	"github.com/callistaenterprise/goblog/common/router"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"net/http"
+)
 
 // Initialize our routes
-var routes = Routes{
-	Route{
+var routes = router.Routes{
+	router.Route{
 		"GetAccountByNameWithCount", // Name
 		"GET", // HTTP method
 		"/accountsbyname/{accountName}", // Route pattern
 		GetAccountByNameWithCount,
+		true,
 	},
-	Route{
-		"GetAccount", // Name
-		"GET",        // HTTP method
+	router.Route{
+		"LoadAccount", // Name
+		"GET",         // HTTP method
 		"/accounts/{accountId}", // Route pattern
 		GetAccount,
+		true,
 	},
-	Route{
+	router.Route{
 		"StoreAccount", // Name
 		"POST",         // HTTP method
 		"/accounts",    // Route pattern
 		StoreAccount,
+		true,
 	},
-	Route{
+	router.Route{
 		"UpdateAccount", // Name
 		"PUT",           // HTTP method
 		"/accounts",     // Route pattern
 		UpdateAccount,
+		true,
 	},
-	Route{
+	router.Route{
 		"RandomAccount", // Name
 		"GET",           // HTTP method
 		"/random",       // Route pattern
 		RandomAccount,
+		false,
 	},
-	Route{
+	router.Route{
 		"Seed",  // Name
 		"GET",   // HTTP method
 		"/seed", // Route pattern
 		SeedAccounts,
+		false,
 	},
-	Route{
+	router.Route{
 		"HealthCheck",
 		"GET",
 		"/health",
@@ -59,5 +58,13 @@ var routes = Routes{
 			writer.WriteHeader(http.StatusOK)
 			writer.Write([]byte("OK"))
 		},
+		false,
+	},
+	router.Route{
+		"Prometheus",
+		"GET",
+		"/metrics",
+		promhttp.Handler().ServeHTTP,
+		false,
 	},
 }

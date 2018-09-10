@@ -48,6 +48,7 @@ func init() {
 
 	flag.Parse()
 
+	viper.Set("service_name", appName)
 	viper.Set("profile", *profile)
 	viper.Set("configServerUrl", *configServerURL)
 	viper.Set("configBranch", *configBranch)

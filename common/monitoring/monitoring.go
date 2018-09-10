@@ -1,6 +1,7 @@
-package service
+package monitoring
 
 import (
+	"github.com/callistaenterprise/goblog/common/router"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/viper"
 	"net/http"
@@ -8,7 +9,7 @@ import (
 	"time"
 )
 
-func buildSummaryVec(metricName string, metricHelp string) *prometheus.SummaryVec {
+func BuildSummaryVec(metricName string, metricHelp string) *prometheus.SummaryVec {
 	summaryVec := prometheus.NewSummaryVec(
 		prometheus.SummaryOpts{
 			Namespace: viper.GetString("service_name"),
@@ -21,7 +22,9 @@ func buildSummaryVec(metricName string, metricHelp string) *prometheus.SummaryVe
 	return summaryVec
 }
 
-func withMonitoring(next http.Handler, route Route) http.Handler {
+// WithMonitoring optionally adds a middleware that stores request duration and response size into the supplied
+// summaryVec
+func WithMonitoring(next http.Handler, route router.Route, summary *prometheus.SummaryVec) http.Handler {
 
 	// Just return the next handler if route shouldn't be monitored
 	if !route.Monitor {
@@ -32,9 +35,6 @@ func withMonitoring(next http.Handler, route Route) http.Handler {
 		start := time.Now()
 		next.ServeHTTP(rw, req)
 		duration := time.Since(start)
-
-		// Get summary holder
-		summary := summaryMap[route.Name]
 
 		// Store duration of request
 		summary.WithLabelValues("duration").Observe(duration.Seconds())

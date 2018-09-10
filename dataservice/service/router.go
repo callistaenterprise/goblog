@@ -1,6 +1,8 @@
 package service
 
 import (
+	"github.com/callistaenterprise/goblog/common/monitoring"
+	"github.com/callistaenterprise/goblog/common/router"
 	"net/http"
 
 	"github.com/callistaenterprise/goblog/common/tracing"
@@ -10,21 +12,23 @@ import (
 // NewRouter creates a mux.Router pointer.
 func NewRouter() *mux.Router {
 
-	router := mux.NewRouter().StrictSlash(true)
+	muxRouter := mux.NewRouter().StrictSlash(true)
 	for _, route := range routes {
+		summaryVec := monitoring.BuildSummaryVec(route.Name, route.Method+" "+route.Pattern)
 
-		router.Methods(route.Method).
+		// Add route to muxRouter, including middleware chaining and passing the summaryVec to the WithMonitoring func.
+		muxRouter.Methods(route.Method).
 			Path(route.Pattern).
 			Name(route.Name).
-			Handler(loadTracing(route.HandlerFunc, route.Name))
+			Handler(monitoring.WithMonitoring(withTracing(route.HandlerFunc, route), route, summaryVec))
 
 	}
-	return router
+	return muxRouter
 }
 
-func loadTracing(next http.Handler, name string) http.Handler {
+func withTracing(next http.Handler, route router.Route) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		span := tracing.StartHTTPTrace(req, name)
+		span := tracing.StartHTTPTrace(req, route.Name)
 		defer span.Finish()
 
 		ctx := tracing.UpdateContext(req.Context(), span)

@@ -1,46 +1,46 @@
 package service
 
-import "net/http"
+import (
+	"github.com/callistaenterprise/goblog/common/router"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"net/http"
+)
 
 /**
  * Derived from http://thenewstack.io/make-a-restful-json-api-go/
  */
-type Route struct {
-	Name        string
-	Method      string
-	Pattern     string
-	HandlerFunc http.HandlerFunc
-}
 
-type Routes []Route
+var routes = router.Routes{
 
-var routes = Routes{
-
-	Route{
+	router.Route{
 		"ProcessImage",
 		"GET",
 		"/file/{filename}",
 		ProcessImageFromFile,
+		true,
 	},
-	Route{
+	router.Route{
 		"GetAccountImage",
 		"GET",
 		"/accounts/{accountId}",
 		GetAccountImage,
+		true,
 	},
-	Route{
+	router.Route{
 		"UpdateAccountImage",
 		"PUT",
 		"/accounts",
 		UpdateAccountImage,
+		true,
 	},
-	Route{
+	router.Route{
 		"CreateAccountImage",
 		"POST",
 		"/accountS",
 		CreateAccountImage,
+		true,
 	},
-	Route{
+	router.Route{
 		"HealthCheck",
 		"GET",
 		"/health",
@@ -48,5 +48,13 @@ var routes = Routes{
 			w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
 			w.Write([]byte("OK"))
 		},
+		false,
+	},
+	router.Route{
+		"Prometheus",
+		"GET",
+		"/metrics",
+		promhttp.Handler().ServeHTTP,
+		false,
 	},
 }

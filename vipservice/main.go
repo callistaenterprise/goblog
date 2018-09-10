@@ -49,6 +49,7 @@ func init() {
 	configBranch := flag.String("configBranch", "master", "git branch to fetch configuration from")
 	flag.Parse()
 
+	viper.Set("service_name", appName)
 	viper.Set("profile", *profile)
 	viper.Set("configServerUrl", *configServerURL)
 	viper.Set("configBranch", *configBranch)
