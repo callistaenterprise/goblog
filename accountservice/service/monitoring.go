@@ -21,17 +21,6 @@ func buildSummaryVec(metricName string, metricHelp string) *prometheus.SummaryVe
 	return summaryVec
 }
 
-//func buildHistogram(metricName string, metricHelp string) prometheus.Histogram {
-//	histogram := prometheus.NewHistogram(prometheus.HistogramOpts{
-//		Namespace: viper.GetString("service_name"),
-//		Name:      metricName,
-//		Help:      metricHelp,
-//		Buckets:   prometheus.LinearBuckets(0, 0.001, 20),
-//	})
-//	prometheus.Register(histogram)
-//	return histogram
-//}
-
 func withMonitoring(next http.Handler, route Route) http.Handler {
 
 	// Just return the next handler if route shouldn't be monitored

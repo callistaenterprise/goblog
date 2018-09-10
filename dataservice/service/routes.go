@@ -41,13 +41,13 @@ var routes = Routes{
 	},
 	Route{
 		"RandomAccount", // Name
-		"GET",        // HTTP method
-		"/random", // Route pattern
+		"GET",           // HTTP method
+		"/random",       // Route pattern
 		RandomAccount,
 	},
 	Route{
-		"Seed", // Name
-		"GET",        // HTTP method
+		"Seed",  // Name
+		"GET",   // HTTP method
 		"/seed", // Route pattern
 		SeedAccounts,
 	},

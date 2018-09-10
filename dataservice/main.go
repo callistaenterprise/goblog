@@ -40,7 +40,7 @@ func main() {
 
 	service.DBClient = &dbclient.GormClient{}
 	service.DBClient.SetupDB(viper.GetString("cockroachdb_conn_url"))
-	// service.DBClient.SeedAccounts()
+	service.DBClient.SeedAccounts()
 
 	initializeTracing()
 
