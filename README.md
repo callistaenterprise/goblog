@@ -9,10 +9,16 @@ Make sure Turbine doesn't crash on startup due to AMQ connection problem.
 
 ### Setting up Docker Swarm cluster
 
-    docker-machine create --driver virtualbox --virtualbox-cpu-count 2 --virtualbox-memory 2048 --virtualbox-disk-size 20000 swarm-manager-0
+    docker-machine create --driver virtualbox --virtualbox-cpu-count 4 --virtualbox-memory 6000 --virtualbox-disk-size 30000 swarm-manager-0
     eval "$(docker-machine env swarm-manager-0)"
     docker network create --driver overlay my_network
     docker swarm init --advertise-addr 192.168.99.100
+        
+##### Adding a worker node
+
+
+    docker swarm join --token SWMTKN-1-5njothki0tww7gestuh309qgrnr6r357phlsn7ue0r8qmlqnla-181tl1rfou16vv3e7nxrk4ra3 192.168.99.100:2377
+
     
     
 ### Deploy spring cloud services

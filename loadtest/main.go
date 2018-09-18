@@ -15,7 +15,6 @@ import (
 	"fmt"
 	"github.com/Sirupsen/logrus"
 	"net/url"
-	"strings"
 )
 
 var Log = logrus.New()
@@ -38,8 +37,8 @@ func main() {
 	var _ int = *delayPtr
 
 	for i := 0; i < users; i++ {
-		go securedTest()
-		// go standardTest()
+		//go securedTest()
+		go standardTest()
 	}
 
 	// Block...
@@ -98,7 +97,7 @@ func securedTest() {
 	var token = getToken()
 	for {
 		accountId := rand.Intn(99) + 10000
-		 url := "https://" + baseAddr + ":8765/api/secured/accounts/" + strconv.Itoa(accountId)
+		url := "https://" + baseAddr + ":8765/api/secured/accounts/" + strconv.Itoa(accountId)
 		// url := "http://" + baseAddr + ":6666/accounts/" + strconv.Itoa(accountId)
 
 		req, _ := http.NewRequest("GET", url, nil)
@@ -139,7 +138,7 @@ func standardTest() {
 		serviceUrl := url + strconv.Itoa(accountId)
 
 		var DefaultTransport http.RoundTripper = &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
 			DisableKeepAlives: false,
 		}
 		req, _ := http.NewRequest("GET", serviceUrl, nil)
@@ -158,20 +157,20 @@ func printPretty(body []byte, m map[string]interface{}) {
 	if body == nil {
 		return
 	}
-	err  := json.Unmarshal(body, &m)
+	err := json.Unmarshal(body, &m)
 	if err != nil {
 		return
 	}
-	quote :=  m["quote"].(map[string]interface{})["quote"].(string)
-	quoteIp := m["quote"].(map[string]interface{})["ipAddress"].(string)
-	quoteIp = quoteIp[strings.IndexRune(quoteIp, '/') + 1 :]
-
-	imageUrl := m["imageData"].(map[string]interface{})["url"].(string)
-	imageServedBy := m["imageData"].(map[string]interface{})["servedBy"].(string)
-
-	fmt.Print("|" + m["name"].(string) + "\t|" + m["servedBy"].(string) + "\t|")
-	fmt.Print(PadRight(quote, " ", 32) + "\t|" + quoteIp + "\t|")
-	fmt.Println(PadRight(imageUrl, " ", 28) + "\t|" + imageServedBy + "\t|")
+	//quote :=  m["quote"].(map[string]interface{})["quote"].(string)
+	//quoteIp := m["quote"].(map[string]interface{})["ipAddress"].(string)
+	//quoteIp = quoteIp[strings.IndexRune(quoteIp, '/') + 1 :]
+	//
+	//imageUrl := m["imageData"].(map[string]interface{})["url"].(string)
+	//imageServedBy := m["imageData"].(map[string]interface{})["servedBy"].(string)
+	//
+	//fmt.Print("|" + m["name"].(string) + "\t|" + m["servedBy"].(string) + "\t|")
+	//fmt.Print(PadRight(quote, " ", 32) + "\t|" + quoteIp + "\t|")
+	//fmt.Println(PadRight(imageUrl, " ", 28) + "\t|" + imageServedBy + "\t|")
 
 }
 
