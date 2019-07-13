@@ -6,11 +6,11 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/sirupsen/logrus"
 	"github.com/callistaenterprise/goblog/common/config"
 	"github.com/callistaenterprise/goblog/common/tracing"
 	"github.com/callistaenterprise/goblog/dataservice/dbclient"
 	"github.com/callistaenterprise/goblog/dataservice/service"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 

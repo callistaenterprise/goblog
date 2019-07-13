@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/sirupsen/logrus"
 	"github.com/callistaenterprise/goblog/common/model"
 	"github.com/callistaenterprise/goblog/dataservice/dbclient"
 	"github.com/gorilla/mux"
+	"github.com/sirupsen/logrus"
 )
 
 // DBClient is our GORM instance.

@@ -9,15 +9,15 @@ import (
 // Initialize our routes
 var routes = router.Routes{
 	router.Route{
-		"GetAccountByNameWithCount", // Name
-		"GET", // HTTP method
+		"GetAccountByNameWithCount",     // Name
+		"GET",                           // HTTP method
 		"/accountsbyname/{accountName}", // Route pattern
 		GetAccountByNameWithCount,
 		true,
 	},
 	router.Route{
-		"LoadAccount", // Name
-		"GET",         // HTTP method
+		"LoadAccount",           // Name
+		"GET",                   // HTTP method
 		"/accounts/{accountId}", // Route pattern
 		GetAccount,
 		true,
