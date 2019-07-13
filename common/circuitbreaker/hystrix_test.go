@@ -3,8 +3,8 @@ package circuitbreaker
 import (
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"github.com/afex/hystrix-go/hystrix"
+	"github.com/sirupsen/logrus"
 	. "github.com/smartystreets/goconvey/convey"
 	"golang.org/x/net/context"
 	"gopkg.in/h2non/gock.v1"
