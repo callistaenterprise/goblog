@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"context"
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/callistaenterprise/goblog/common/tracing"
 	"github.com/opentracing/opentracing-go"
 	"github.com/streadway/amqp"
@@ -110,7 +110,7 @@ func (m *AmqpClient) PublishOnQueueWithContext(ctx context.Context, body []byte,
 		false,      // mandatory
 		false,      // immediate
 		buildMessage(ctx, body))
-	logrus.Infof("A message was sent to queue %v: %v", queueName, string(body))
+	logrus.Debugf("A message was sent to queue %v: %v", queueName, string(body))
 	return err
 }
 
@@ -229,6 +229,7 @@ func (m *AmqpClient) SubscribeToQueue(queueName string, consumerName string, han
 // Close closes the connection to the AMQP-broker, if available.
 func (m *AmqpClient) Close() {
 	if m.conn != nil {
+		logrus.Infoln("Closing connection to AMQP broker")
 		m.conn.Close()
 	}
 }

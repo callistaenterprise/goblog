@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/callistaenterprise/goblog/gelftail/aggregator"
 	"github.com/callistaenterprise/goblog/gelftail/transformer"
 	"io/ioutil"

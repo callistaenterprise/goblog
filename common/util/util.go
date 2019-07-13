@@ -2,10 +2,11 @@ package util
 
 import (
 	"fmt"
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net"
 	"strings"
+	"time"
 )
 
 // ResolveIPFromHostsFile reads the final IP address of the /etc/hosts file. Works for docker, typically at least...
@@ -65,4 +66,8 @@ func GetIPWithPrefix(prefix string) string {
 	}
 	return "127.0.0.1"
 	//panic("Unable to determine local IP address (non loopback). Exiting.")
+}
+
+func NowStr() string {
+	return time.Now().Format("2006-01-02T15:04:05.000")
 }

@@ -1,34 +1,37 @@
 package service
 
 import (
+	"github.com/callistaenterprise/goblog/common/monitoring"
+	"github.com/callistaenterprise/goblog/common/router"
 	"net/http"
-	"github.com/gorilla/mux"
+
 	"github.com/callistaenterprise/goblog/common/tracing"
+	"github.com/gorilla/mux"
 )
 
 /**
  * From http://thenewstack.io/make-a-restful-json-api-go/
  */
+// NewRouter creates a mux.Router pointer.
 func NewRouter() *mux.Router {
 
-	router := mux.NewRouter().StrictSlash(true)
+	muxRouter := mux.NewRouter().StrictSlash(true)
 	for _, route := range routes {
-		var handler http.Handler
+		summaryVec := monitoring.BuildSummaryVec(route.Name, route.Method+" "+route.Pattern)
 
-		handler = route.HandlerFunc
-
-		router.
-			Methods(route.Method).
+		// Add route to muxRouter, including middleware chaining and passing the summaryVec to the WithMonitoring func.
+		muxRouter.Methods(route.Method).
 			Path(route.Pattern).
 			Name(route.Name).
-			Handler(loadTracing(handler))
+			Handler(monitoring.WithMonitoring(withTracing(route.HandlerFunc, route), route, summaryVec))
+
 	}
-	return router
+	return muxRouter
 }
 
-func loadTracing(next http.Handler) http.Handler {
+func withTracing(next http.Handler, route router.Route) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		span := tracing.StartHTTPTrace(req, "imageservice")
+		span := tracing.StartHTTPTrace(req, route.Name)
 		defer span.Finish()
 
 		ctx := tracing.UpdateContext(req.Context(), span)

@@ -26,7 +26,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/callistaenterprise/goblog/common/config"
 	"github.com/callistaenterprise/goblog/common/messaging"
 	"github.com/callistaenterprise/goblog/common/tracing"
@@ -49,6 +49,7 @@ func init() {
 	configBranch := flag.String("configBranch", "master", "git branch to fetch configuration from")
 	flag.Parse()
 
+	viper.Set("service_name", appName)
 	viper.Set("profile", *profile)
 	viper.Set("configServerUrl", *configServerURL)
 	viper.Set("configBranch", *configBranch)

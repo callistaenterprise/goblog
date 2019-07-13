@@ -2,17 +2,17 @@ package main
 
 import (
 	"flag"
-	"github.com/Sirupsen/logrus"
-	"github.com/callistaenterprise/goblog/accountservice/dbclient"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"github.com/sirupsen/logrus"
 	"github.com/callistaenterprise/goblog/accountservice/service"
 	cb "github.com/callistaenterprise/goblog/common/circuitbreaker"
 	"github.com/callistaenterprise/goblog/common/config"
 	"github.com/callistaenterprise/goblog/common/messaging"
 	"github.com/callistaenterprise/goblog/common/tracing"
 	"github.com/spf13/viper"
-	"os"
-	"os/signal"
-	"syscall"
 )
 
 var appName = "accountservice"
@@ -24,6 +24,7 @@ func init() {
 
 	flag.Parse()
 
+	viper.Set("service_name", appName)
 	viper.Set("profile", *profile)
 	viper.Set("configServerURL", *configServerURL)
 	viper.Set("configBranch", *configBranch)
@@ -39,10 +40,9 @@ func main() {
 		viper.GetString("profile"),
 		viper.GetString("configBranch"))
 
-	initializeBoltClient()
 	initializeMessaging()
 	initializeTracing()
-	cb.ConfigureHystrix([]string{"imageservice", "quotes-service"}, service.MessagingClient)
+	cb.ConfigureHystrix([]string{"account-to-data", "account-to-image", "account-to-quotes"}, service.MessagingClient)
 
 	handleSigterm(func() {
 		cb.Deregister(service.MessagingClient)
@@ -62,12 +62,6 @@ func initializeMessaging() {
 	service.MessagingClient = &messaging.AmqpClient{}
 	service.MessagingClient.ConnectToBroker(viper.GetString("amqp_server_url"))
 	service.MessagingClient.Subscribe(viper.GetString("config_event_bus"), "topic", appName, config.HandleRefreshEvent)
-}
-
-func initializeBoltClient() {
-	service.DBClient = &dbclient.BoltClient{}
-	service.DBClient.OpenBoltDb()
-	service.DBClient.Seed()
 }
 
 // Handles Ctrl+C or most other means of "controlled" shutdown gracefully. Invokes the supplied func before exiting.

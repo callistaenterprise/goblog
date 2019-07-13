@@ -3,20 +3,20 @@ package circuitbreaker
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"github.com/afex/hystrix-go/hystrix"
+	"github.com/spf13/viper"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"time"
 
-	"github.com/Sirupsen/logrus"
-	"github.com/afex/hystrix-go/hystrix"
+	"fmt"
+	"github.com/sirupsen/logrus"
 	"github.com/callistaenterprise/goblog/common/messaging"
 	"github.com/callistaenterprise/goblog/common/tracing"
 	"github.com/callistaenterprise/goblog/common/util"
 	"github.com/eapache/go-resiliency/retrier"
-	"github.com/spf13/viper"
 )
 
 func init() {
@@ -75,7 +75,7 @@ func PerformHTTPRequestCircuitBreaker(ctx context.Context, breakerName string, r
 		return out, nil
 
 	case err := <-errors:
-		logrus.Debugf("Got error on channel in breaker %v. Msg: %v", breakerName, err.Error())
+		logrus.Errorf("Got error on channel in breaker %v. Msg: %v", breakerName, err.Error())
 		return nil, err
 	}
 }
@@ -140,6 +140,7 @@ func Deregister(amqpClient messaging.IMessagingClient) {
 	}
 	bytes, _ := json.Marshal(token)
 	amqpClient.PublishOnQueue(bytes, "discovery")
+	logrus.Infoln("Sent deregistration token over SpringCloudBus")
 }
 
 func publishDiscoveryToken(amqpClient messaging.IMessagingClient) {
@@ -171,9 +172,9 @@ func resolveProperty(command string, prop string) int {
 func getDefaultHystrixConfigPropertyValue(prop string) int {
 	switch prop {
 	case "Timeout":
-		return hystrix.DefaultTimeout
+		return 1000 //hystrix.DefaultTimeout
 	case "MaxConcurrentRequests":
-		return hystrix.DefaultMaxConcurrent
+		return 200 //hystrix.DefaultMaxConcurrent
 	case "RequestVolumeThreshold":
 		return hystrix.DefaultVolumeThreshold
 	case "SleepWindow":

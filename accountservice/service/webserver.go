@@ -3,7 +3,7 @@ package service
 import (
 	"net/http"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 // StartWebServer starts a web server at the designated port.
