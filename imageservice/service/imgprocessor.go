@@ -2,10 +2,9 @@ package service
 
 import (
 	"bytes"
+	"github.com/disintegration/gift"
 	"image"
 	"image/jpeg"
-
-	"github.com/disintegration/gift"
 )
 
 // Sepia performs a sepia conversion

@@ -5,11 +5,10 @@ import (
 	"strconv"
 
 	"context"
-	"github.com/sirupsen/logrus"
 	"github.com/callistaenterprise/goblog/common/model"
-	"github.com/callistaenterprise/goblog/common/tracing"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/mock"
 	"github.com/twinj/uuid"
 )
@@ -62,8 +61,6 @@ func (gc *GormClient) Close() {
 }
 
 func (gc *GormClient) QueryAccountImage(ctx context.Context, accountId string) (model.AccountImage, error) {
-	span := tracing.StartChildSpanFromContext(ctx, "GormClient.QueryAccountImage")
-	defer span.Finish()
 
 	if gc.crDB == nil {
 		return model.AccountImage{}, fmt.Errorf("Connection to DB not established!")

@@ -3,10 +3,9 @@ package service
 import (
 	"github.com/callistaenterprise/goblog/common/monitoring"
 	"github.com/callistaenterprise/goblog/common/router"
-	"net/http"
-
 	"github.com/callistaenterprise/goblog/common/tracing"
 	"github.com/gorilla/mux"
+	"net/http"
 )
 
 /**
