@@ -36,3 +36,13 @@ From /goblog
 Find a container running the _cockroachdb/cockroach_ container using _docker ps_ and note the container ID. Then we'll use _docker exec_ to launch the SQL CLI:  
    
     > docker exec -it 10f4b6c727f8 ./cockroach sql --insecure
+
+### Create user and database for Cockroach
+
+Originally from: https://github.com/cockroachdb/cockroach/issues/19826#issuecomment-358360851
+
+    DROP USER IF EXISTS cockroach; \
+    DROP DATABASE IF EXISTS account CASCADE; \
+    CREATE DATABASE IF NOT EXISTS account; \
+    CREATE USER cockroach WITH PASSWORD 'password'; \
+    GRANT ALL ON DATABASE account TO cockroach;

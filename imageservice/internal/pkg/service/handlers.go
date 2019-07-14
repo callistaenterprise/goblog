@@ -11,7 +11,7 @@ import (
 
 	"github.com/callistaenterprise/goblog/common/model"
 	"github.com/callistaenterprise/goblog/common/util"
-	"github.com/callistaenterprise/goblog/imageservice/dbclient"
+	"github.com/callistaenterprise/goblog/imageservice/internal/pkg/dbclient"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"

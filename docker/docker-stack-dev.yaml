@@ -1,0 +1,218 @@
+version: "3.7"
+
+services:
+  accountservice:
+    image: someprefix/accountservice
+    command:
+      - "accountservice"
+    environment:
+      ENVIRONMENT: "test"
+    restart: unless-stopped
+    deploy:
+      mode: replicated
+      replicas: 1
+    networks:
+      - my_network
+    depends_on:
+      - configserver
+      - rabbitmq
+
+  dataservice:
+    image: someprefix/dataservice
+    command:
+      - "dataservice"
+    environment:
+      ENVIRONMENT: "test"
+    restart: unless-stopped
+    deploy:
+      mode: replicated
+      replicas: 1
+    networks:
+      - my_network
+    depends_on:
+      - configserver
+      - rabbitmq
+
+  imageservice:
+    image: someprefix/imageservice
+    command:
+      - "imageservice"
+    environment:
+      ENVIRONMENT: "test"
+    restart: unless-stopped
+    deploy:
+      mode: replicated
+      replicas: 1
+    networks:
+      - my_network
+    depends_on:
+      - configserver
+      - rabbitmq
+
+  vipservice:
+    image: someprefix/vipservice
+    command:
+      - "vipservice"
+    environment:
+      ENVIRONMENT: "test"
+    restart: unless-stopped
+    deploy:
+      mode: replicated
+      replicas: 1
+    networks:
+      - my_network
+    depends_on:
+      - configserver
+      - rabbitmq
+
+  # docker service create --name=cockroachdb1 --label cockroachdb --network=my_network -p 26257:26257 -p 3030:8080 --mount type=volume,source=cockroach-data1,target=/cockroach/cockroach-data cockroachdb/cockroach:v1.1.3 start --insecure
+  cockroachdb1:
+    image: cockroachdb/cockroach:v19.1.2
+    command:
+      - "start"
+      - "--insecure"
+    ports:
+      - "26257:26257"
+      - "3030:8080"
+    volumes:
+      - "cockroach-data1:/cockroach/cockroach-data"
+    restart: unless-stopped
+    deploy:
+      labels:
+        - "cockroachdb"
+    networks:
+      - my_network
+
+  # docker service create --name=cockroachdb2 --label cockroachdb --network=my_network --mount type=volume,source=cockroach-data2,target=/cockroach/cockroach-data cockroachdb/cockroach:v19.1.2 start --insecure --join=cockroachdb1
+  cockroachdb2:
+    image: cockroachdb/cockroach:v19.1.2
+    command:
+      - "start"
+      - "--insecure"
+      - "--join=cockroachdb1"
+    volumes:
+      - "cockroach-data2:/cockroach/cockroach-data"
+    deploy:
+      labels:
+        - "cockroachdb"
+    networks:
+      - my_network
+    depends_on:
+      - cockroachdb1
+
+  cockroachdb3:
+    image: cockroachdb/cockroach:v19.1.2
+    command:
+      - "start"
+      - "--insecure"
+      - "--join=cockroachdb1"
+    volumes:
+      - "cockroach-data3:/cockroach/cockroach-data"
+    deploy:
+      labels:
+        - "cockroachdb"
+    networks:
+      - my_network
+    depends_on:
+      - cockroachdb1
+
+  accountdb-init:
+    image: someprefix/cockroachdb-init
+    entrypoint: /cockroach/init.sh
+    command: account
+    networks:
+      - my_network
+    depends_on:
+      - cockroachdb1
+    restart: on-failure
+
+  imagedb-init:
+    image: someprefix/cockroachdb-init
+    entrypoint: /cockroach/init.sh
+    command: image
+    networks:
+      - my_network
+    depends_on:
+      - cockroachdb1
+    restart: on-failure
+
+  zipkin:
+    image: openzipkin/zipkin:latest
+    ports:
+      - 9411:9411
+    networks:
+      - my_network
+    depends_on:
+      - rabbitmq
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  # docker service create --replicas 1 --name edge-server -p 8765:8765 --network my_network --update-delay 10s --with-registry-auth  --update-parallelism 1 someprefix/edge-server
+  edge-server:
+    image: someprefix/edge-server
+    ports:
+      - "8765:8765"
+    networks:
+      - my_network
+
+  configserver:
+    image: someprefix/configserver
+    ports:
+      - 8888:8888
+    deploy:
+      mode: replicated
+      replicas: 1
+    networks:
+      - my_network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - 5672:5672
+      - 5673:5673
+      - 15672:15672
+    networks:
+      - my_network
+    deploy:
+      mode: replicated
+      replicas: 1
+
+  # docker service create  --constraint node.role==manager --mount type=volume,source=swarm-endpoints,target=/etc/swarm-endpoints/,volume-driver=local --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock --name=swarm-prometheus-discovery --replicas=1 --network=my_network someprefix/swarm-prometheus-discovery
+  swarm-prometheus-discovery:
+    image: someprefix/swarm-prometheus-discovery
+    networks:
+      - my_network
+    volumes:
+      - "swarm-endpoints:/etc/swarm-endpoints/"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
+  # docker service create -p 9090:9090 --constraint node.role==manager --mount type=volume,source=swarm-endpoints,target=/etc/swarm-endpoints/,volume-driver=local --name=prometheus --replicas=1 --network=my_network someprefix/prometheus
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - my_network
+    volumes:
+      - "swarm-endpoints:/etc/swarm-endpoints/"
+      - "./config/prometheus:/etc/prometheus"
+
+  # docker service create -p 3000:3000 --constraint node.role==manager --name=grafana --replicas=1 --network=my_network grafana/grafana
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - my_network
+
+volumes:
+  cockroach-data1:
+  cockroach-data2:
+  cockroach-data3:
+  swarm-endpoints:
+
+networks:
+  my_network:
+    external: true

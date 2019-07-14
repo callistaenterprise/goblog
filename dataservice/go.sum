@@ -15,6 +15,7 @@ github.com/armon/consul-api v0.0.0-20180202201655-eb2c6b5be1b6/go.mod h1:grANhF5
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=
 github.com/beorn7/perks v1.0.0 h1:HWo1m869IqiPhD389kmkxeTalrjNbbJTC8LXupb+sl0=
 github.com/beorn7/perks v1.0.0/go.mod h1:KWe93zE9D1o94FZ5RNwFwVgaQK1VOXiVxmqh+CedLV8=
+github.com/callistaenterprise/goblog v0.0.0-20190713193939-8dc38c99d030 h1:9hFAle6EKhSHwkE3WaHco3aIjyAaGaN9Il6P7l1egLE=
 github.com/callistaenterprise/goblog/common v0.0.0-20190713133714-ded5832e931e h1:GH+UJSwAYQglA+/wqGfXN2aNgWqmtLMYQQ4+SqMim/4=
 github.com/callistaenterprise/goblog/common v0.0.0-20190713133714-ded5832e931e/go.mod h1:sbjQA8Atb2DC1P4wUXLV/+pdA10BICC68+N8tPINQdg=
 github.com/cespare/xxhash v1.1.0/go.mod h1:XrSqR1VqqWfGrhpAt58auRo0WTKS1nRRg3ghfAqPWnc=

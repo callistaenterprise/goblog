@@ -1,9 +1,16 @@
-FROM iron/base
+FROM alpine:latest
 
 EXPOSE 6868
-ADD vipservice-linux-amd64 /
-ADD healthchecker-linux-amd64 /
+RUN apk --update add \
+    curl \
+	tzdata \
+	ca-certificates \
+	&& rm -rf /var/cache/apk/*
 
-HEALTHCHECK --interval=3s --timeout=3s CMD ["./healthchecker-linux-amd64", "-port=6868"] || exit 1
+ENV TZ=Europe/Stockholm
 
-ENTRYPOINT ["./vipservice-linux-amd64", "-configServerUrl=http://configserver:8888", "-profile=test", "-configBranch=P13"]
+ADD bin/vipservice /
+
+HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=5 CMD curl -sSf http://127.0.0.1:6868/health
+
+ENTRYPOINT ["./vipservice", "-configServerUrl=http://configserver:8888", "-profile=test", "-configBranch=P16"]

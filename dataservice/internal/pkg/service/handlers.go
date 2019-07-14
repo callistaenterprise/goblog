@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/callistaenterprise/goblog/common/model"
-	"github.com/callistaenterprise/goblog/dataservice/dbclient"
+	"github.com/callistaenterprise/goblog/dataservice/internal/pkg/dbclient"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 )

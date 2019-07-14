@@ -2,8 +2,8 @@ package service
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"github.com/graphql-go/graphql"
+	"github.com/sirupsen/logrus"
 )
 
 type GraphQLResolvers interface {

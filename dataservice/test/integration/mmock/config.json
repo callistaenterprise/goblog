@@ -1,0 +1,17 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/accountservice-*"
+  },
+  "response": {
+    "statusCode": 200,
+    "headers": {
+      "Content-Type": [
+        "application/json"
+      ]
+    },
+    "body": "{\"name\":\"accountservice-test\",\"profiles\":[\"P16\"],\"label\":\"master\",\"version\":\"b8cfe2779e9604804e625135b96b4724ea378736\",\"propertySources\":[{\"name\":\"https://github.com/eriklupander/go-microservice-config.git/accountservice-test.yml\",\"source\":{\"server_port\":6767,\"server_name\":\"Accountservice TEST\",\"zipkin.service.url\":\"http://zipkin:9411\"}}]}\n"
+  }
+}
+
+

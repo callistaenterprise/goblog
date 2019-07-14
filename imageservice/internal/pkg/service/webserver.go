@@ -11,7 +11,7 @@ func StartWebServer(port string) {
 
 	r := NewRouter()
 	http.Handle("/", r)
-	logrus.Infof("Starting HTTP service at ", port)
+	logrus.Infof("Starting HTTP service at %v", port)
 	err := http.ListenAndServe(":"+port, nil)
 	if err != nil {
 		log.Println("An error occured starting HTTP listener at port " + port)

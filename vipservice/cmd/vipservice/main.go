@@ -29,7 +29,7 @@ import (
 	"github.com/callistaenterprise/goblog/common/config"
 	"github.com/callistaenterprise/goblog/common/messaging"
 	"github.com/callistaenterprise/goblog/common/tracing"
-	"github.com/callistaenterprise/goblog/vipservice/service"
+	"github.com/callistaenterprise/goblog/vipservice/internal/pkg/service"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"github.com/streadway/amqp"

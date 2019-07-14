@@ -30,8 +30,8 @@ import (
 
 	"github.com/callistaenterprise/goblog/common/config"
 	"github.com/callistaenterprise/goblog/common/tracing"
-	"github.com/callistaenterprise/goblog/imageservice/dbclient"
-	"github.com/callistaenterprise/goblog/imageservice/service"
+	"github.com/callistaenterprise/goblog/imageservice/internal/pkg/dbclient"
+	"github.com/callistaenterprise/goblog/imageservice/internal/pkg/service"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"os"

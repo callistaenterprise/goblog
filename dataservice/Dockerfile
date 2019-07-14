@@ -1,10 +1,17 @@
-FROM iron/base
+FROM alpine:latest
 
-EXPOSE 7777
+EXPOSE 7070
 
-ADD dataservice-linux-amd64 /
-ADD healthchecker-linux-amd64 /
+RUN apk --update add \
+    curl \
+	tzdata \
+	ca-certificates \
+	&& rm -rf /var/cache/apk/*
 
-HEALTHCHECK --interval=3s --timeout=15s CMD ["./healthchecker-linux-amd64", "-port=7070"] || exit 1
+ENV TZ=Europe/Stockholm
 
-ENTRYPOINT ["./dataservice-linux-amd64", "-configServerUrl=http://configserver:8888", "-profile=test", "-configBranch=P13"]
+ADD bin/dataservice /
+
+HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=5 CMD curl -sSf http://127.0.0.1:7070/health
+
+ENTRYPOINT ["./dataservice", "-configServerUrl=http://configserver:8888", "-profile=test", "-configBranch=P16"]

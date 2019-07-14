@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"context"
-	internalmodel "github.com/callistaenterprise/goblog/accountservice/model"
+	internalmodel "github.com/callistaenterprise/goblog/accountservice/internal/pkg/model"
 	"github.com/callistaenterprise/goblog/common/circuitbreaker"
 	"github.com/callistaenterprise/goblog/common/messaging"
 	"github.com/callistaenterprise/goblog/common/tracing"
@@ -171,7 +171,6 @@ func TestNotificationIsSentForVIPAccount(t *testing.T) {
 		})
 	})
 }
-
 
 func TestHealthCheckOk(t *testing.T) {
 	reset()

@@ -1,10 +1,10 @@
 package service
 
 import (
-	"github.com/sirupsen/logrus"
-	internalmodel "github.com/callistaenterprise/goblog/accountservice/model"
+	internalmodel "github.com/callistaenterprise/goblog/accountservice/internal/pkg/model"
 	"github.com/callistaenterprise/goblog/common/model"
 	"github.com/graphql-go/graphql"
+	"github.com/sirupsen/logrus"
 	"log"
 	"strconv"
 	"time"

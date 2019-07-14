@@ -10,7 +10,7 @@ import (
 
 func TestUtilSpec(t *testing.T) {
 
-	fImg1, err := os.Open("../testimages/cake.jpg")
+	fImg1, err := os.Open("../../../testimages/cake.jpg")
 	defer fImg1.Close()
 	if err != nil {
 		panic(err.Error())

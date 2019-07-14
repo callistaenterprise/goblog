@@ -10,14 +10,14 @@ import (
 
 	"bytes"
 	"fmt"
-	"github.com/sirupsen/logrus"
-	internalmodel "github.com/callistaenterprise/goblog/accountservice/model"
+	internalmodel "github.com/callistaenterprise/goblog/accountservice/internal/pkg/model"
 	cb "github.com/callistaenterprise/goblog/common/circuitbreaker"
 	"github.com/callistaenterprise/goblog/common/messaging"
 	"github.com/callistaenterprise/goblog/common/model"
 	"github.com/callistaenterprise/goblog/common/tracing"
 	"github.com/callistaenterprise/goblog/common/util"
 	"github.com/gorilla/mux"
+	"github.com/sirupsen/logrus"
 	"io/ioutil"
 )
 

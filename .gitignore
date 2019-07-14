@@ -62,3 +62,5 @@ dbloadtest/logs
 dbloadtest/dbloadtest
 dbloadtest/target
 dbloadtest/logs/testFile.log
+
+bin/

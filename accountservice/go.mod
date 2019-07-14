@@ -2,6 +2,8 @@ module github.com/callistaenterprise/goblog/accountservice
 
 go 1.12
 
+replace github.com/callistaenterprise/goblog/common => ../common
+
 require (
 	github.com/callistaenterprise/goblog/common v0.0.0-20190713133714-ded5832e931e
 	github.com/gorilla/mux v1.7.3

@@ -1,9 +1,16 @@
-FROM iron/base
+FROM alpine:latest
+
 EXPOSE 6767
-EXPOSE 8181
 
-ADD accountservice-linux-amd64 /
-ADD healthchecker-linux-amd64 /
+RUN apk --update add \
+    curl \
+	tzdata \
+	ca-certificates \
+	&& rm -rf /var/cache/apk/*
 
-HEALTHCHECK --interval=3s --timeout=3s CMD ["./healthchecker-linux-amd64", "-port=6767"] || exit 1
-ENTRYPOINT ["./accountservice-linux-amd64", "-configServerUrl=http://configserver:8888", "-profile=test", "-configBranch=P13"]
+ENV TZ=Europe/Stockholm
+
+ADD bin/accountservice /
+
+HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=5 CMD curl -sSf http://127.0.0.1:6767/health
+ENTRYPOINT ["./accountservice", "-configServerUrl=http://configserver:8888", "-profile=test", "-configBranch=P16"]
