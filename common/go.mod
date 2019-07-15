@@ -8,6 +8,7 @@ require (
 	github.com/eapache/go-resiliency v1.2.0
 	github.com/go-logfmt/logfmt v0.4.0 // indirect
 	github.com/jinzhu/gorm v1.9.10
+	github.com/myesui/uuid v1.0.0 // indirect
 	github.com/opentracing-contrib/go-observer v0.0.0-20170622124052-a52f23424492 // indirect
 	github.com/opentracing/opentracing-go v1.1.0
 	github.com/openzipkin-contrib/zipkin-go-opentracing v0.3.5 // indirect
