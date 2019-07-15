@@ -3,16 +3,15 @@ package monitoring
 import (
 	"github.com/callistaenterprise/goblog/common/router"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/spf13/viper"
 	"net/http"
 	"strconv"
 	"time"
 )
 
-func BuildSummaryVec(metricName string, metricHelp string) *prometheus.SummaryVec {
+func BuildSummaryVec(serviceName, metricName, metricHelp string) *prometheus.SummaryVec {
 	summaryVec := prometheus.NewSummaryVec(
 		prometheus.SummaryOpts{
-			Namespace: viper.GetString("service_name"),
+			Namespace: serviceName,
 			Name:      metricName,
 			Help:      metricHelp,
 		},
