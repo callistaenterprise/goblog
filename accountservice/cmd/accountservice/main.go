@@ -1,67 +1,50 @@
 package main
 
 import (
-	"flag"
+	"github.com/callistaenterprise/goblog/accountservice/cmd"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/alexflint/go-arg"
 	"github.com/callistaenterprise/goblog/accountservice/internal/pkg/service"
 	cb "github.com/callistaenterprise/goblog/common/circuitbreaker"
-	"github.com/callistaenterprise/goblog/common/config"
 	"github.com/callistaenterprise/goblog/common/messaging"
 	"github.com/callistaenterprise/goblog/common/tracing"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 )
 
 var appName = "accountservice"
-
-func init() {
-	profile := flag.String("profile", "test", "Environment profile, something similar to spring profiles")
-	configServerURL := flag.String("configServerUrl", "http://configserver:8888", "Address to config server")
-	configBranch := flag.String("configBranch", "master", "git branch to fetch configuration from")
-
-	flag.Parse()
-
-	viper.Set("service_name", appName)
-	viper.Set("profile", *profile)
-	viper.Set("configServerURL", *configServerURL)
-	viper.Set("configBranch", *configBranch)
-}
 
 func main() {
 	logrus.SetFormatter(&logrus.JSONFormatter{})
 	logrus.Infof("Starting %v\n", appName)
 
-	config.LoadConfigurationFromBranch(
-		viper.GetString("configServerURL"),
-		appName,
-		viper.GetString("profile"),
-		viper.GetString("configBranch"))
+	// Initialize config struct and populate it froms env vars and flags.
+	cfg := cmd.DefaultConfiguration()
+	arg.MustParse(cfg)
 
-	initializeMessaging()
-	initializeTracing()
+	initializeTracing(cfg)
+	initializeMessaging(cfg)
 	cb.ConfigureHystrix([]string{"account-to-data", "account-to-image", "account-to-quotes"}, service.MessagingClient)
 
 	handleSigterm(func() {
 		cb.Deregister(service.MessagingClient)
 		service.MessagingClient.Close()
 	})
-	service.StartWebServer(viper.GetString("server_port"))
+	service.StartWebServer(cfg.Name, cfg.ServerConfig.Port)
 }
-func initializeTracing() {
-	tracing.InitTracing(viper.GetString("zipkin_server_url"), appName)
+func initializeTracing(cfg *cmd.Config) {
+	tracing.InitTracing(cfg.ZipkinServerUrl, appName)
 }
 
-func initializeMessaging() {
-	if !viper.IsSet("amqp_server_url") {
+func initializeMessaging(cfg *cmd.Config) {
+	if cfg.AmqpConfig.ServerUrl == "" {
 		panic("No 'amqp_server_url' set in configuration, cannot start")
 	}
 
 	service.MessagingClient = &messaging.AmqpClient{}
-	service.MessagingClient.ConnectToBroker(viper.GetString("amqp_server_url"))
-	service.MessagingClient.Subscribe(viper.GetString("config_event_bus"), "topic", appName, config.HandleRefreshEvent)
+	service.MessagingClient.ConnectToBroker(cfg.AmqpConfig.ServerUrl)
 }
 
 // Handles Ctrl+C or most other means of "controlled" shutdown gracefully. Invokes the supplied func before exiting.

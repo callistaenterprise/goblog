@@ -7,9 +7,9 @@ import (
 )
 
 // StartWebServer starts a web server at the designated port.
-func StartWebServer(port string) {
+func StartWebServer(serviceName, port string) {
 
-	r := NewRouter()
+	r := NewRouter(serviceName)
 	http.Handle("/", r)
 
 	logrus.Infof("Starting HTTP service at %v", port)

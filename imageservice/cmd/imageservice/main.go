@@ -24,11 +24,11 @@ SOFTWARE.
 package main
 
 import (
-	"flag"
+	"github.com/alexflint/go-arg"
+	"github.com/callistaenterprise/goblog/imageservice/cmd"
 	"sync"
 	"time"
 
-	"github.com/callistaenterprise/goblog/common/config"
 	"github.com/callistaenterprise/goblog/common/tracing"
 	"github.com/callistaenterprise/goblog/imageservice/internal/pkg/dbclient"
 	"github.com/callistaenterprise/goblog/imageservice/internal/pkg/service"
@@ -41,34 +41,25 @@ import (
 
 var appName = "imageservice"
 
-func init() {
-	profile := flag.String("profile", "test", "Environment profile, something similar to spring profiles")
-	configServerURL := flag.String("configServerUrl", "http://configserver:8888", "Address to config server")
-	configBranch := flag.String("configBranch", "master", "git branch to fetch configuration from")
-
-	flag.Parse()
-
-	viper.Set("service_name", appName)
-	viper.Set("profile", *profile)
-	viper.Set("configServerUrl", *configServerURL)
-	viper.Set("configBranch", *configBranch)
-}
-
 func main() {
 	logrus.SetFormatter(&logrus.JSONFormatter{})
 	logrus.Infof("Starting %v", appName)
 
 	start := time.Now().UTC()
-	config.LoadConfigurationFromBranch(viper.GetString("configServerUrl"), appName, viper.GetString("profile"), viper.GetString("configBranch"))
-	initializeTracing()
+
+	// Initialize config struct and populate it froms env vars and flags.
+	cfg := cmd.DefaultConfiguration()
+	arg.MustParse(cfg)
+
+	initializeTracing(cfg)
 	service.DBClient = &dbclient.GormClient{}
 	service.DBClient.SetupDB(viper.GetString("cockroachdb_conn_url"))
 
-	if viper.GetString("profile") == "dev" {
+	if cfg.Environment == "dev" {
 		service.DBClient.SeedAccountImages()
 	}
 
-	go service.StartWebServer(viper.GetString("server_port")) // Starts HTTP service  (async)
+	go service.StartWebServer(cfg.ServerConfig.Name, cfg.ServerConfig.Port) // Starts HTTP service  (async)
 
 	handleSigterm(func() {
 		logrus.Infoln("Captured Ctrl+C")
@@ -81,8 +72,8 @@ func main() {
 	wg.Add(1)
 	wg.Wait()
 }
-func initializeTracing() {
-	tracing.InitTracing(viper.GetString("zipkin_server_url"), appName)
+func initializeTracing(cfg *cmd.Config) {
+	tracing.InitTracing(cfg.ZipkinServerUrl, appName)
 }
 
 func handleSigterm(handleExit func()) {

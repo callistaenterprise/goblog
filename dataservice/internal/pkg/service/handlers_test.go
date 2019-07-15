@@ -9,13 +9,15 @@ import (
 
 	"github.com/callistaenterprise/goblog/common/model"
 	"github.com/callistaenterprise/goblog/common/tracing"
-	"github.com/callistaenterprise/goblog/dataservice/dbclient"
+	"github.com/callistaenterprise/goblog/dataservice/internal/pkg/dbclient"
 	"github.com/opentracing/opentracing-go"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/stretchr/testify/mock"
 )
 
 var mockRepo = &dbclient.MockGormClient{}
+
+var serviceName = "dataservice"
 
 // mock types
 var anyString = mock.AnythingOfType("string")
@@ -39,7 +41,7 @@ func TestGetAccount(t *testing.T) {
 		resp := httptest.NewRecorder()
 
 		Convey("When the request is handled by the Router", func() {
-			NewRouter().ServeHTTP(resp, req)
+			NewRouter(serviceName).ServeHTTP(resp, req)
 
 			Convey("Then the response should be a 200", func() {
 				So(resp.Code, ShouldEqual, 200)
@@ -57,7 +59,7 @@ func TestGetAccount(t *testing.T) {
 		resp := httptest.NewRecorder()
 
 		Convey("When the request is handled by the Router", func() {
-			NewRouter().ServeHTTP(resp, req)
+			NewRouter(serviceName).ServeHTTP(resp, req)
 
 			Convey("Then the response should be a 404", func() {
 				So(resp.Code, ShouldEqual, 404)
@@ -75,7 +77,7 @@ func TestGetAccountWrongPath(t *testing.T) {
 		resp := httptest.NewRecorder()
 
 		Convey("When the request is handled by the Router", func() {
-			NewRouter().ServeHTTP(resp, req)
+			NewRouter(serviceName).ServeHTTP(resp, req)
 
 			Convey("Then the response should be a 404", func() {
 				So(resp.Code, ShouldEqual, 404)

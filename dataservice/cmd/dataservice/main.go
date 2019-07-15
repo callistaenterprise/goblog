@@ -1,58 +1,41 @@
 package main
 
 import (
-	"flag"
-	"os"
-	"os/signal"
-	"syscall"
-
-	"github.com/callistaenterprise/goblog/common/config"
+	"github.com/alexflint/go-arg"
 	"github.com/callistaenterprise/goblog/common/tracing"
+	"github.com/callistaenterprise/goblog/dataservice/cmd"
 	"github.com/callistaenterprise/goblog/dataservice/internal/pkg/dbclient"
 	"github.com/callistaenterprise/goblog/dataservice/internal/pkg/service"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 var appName = "dataservice"
-
-func init() {
-	profile := flag.String("profile", "test", "Environment profile, something similar to spring profiles")
-	configServerURL := flag.String("configServerUrl", "http://configserver:8888", "Address to config server")
-	configBranch := flag.String("configBranch", "master", "git branch to fetch configuration from")
-
-	flag.Parse()
-
-	viper.Set("service_name", appName)
-	viper.Set("profile", *profile)
-	viper.Set("configServerURL", *configServerURL)
-	viper.Set("configBranch", *configBranch)
-}
 
 func main() {
 	logrus.SetFormatter(&logrus.JSONFormatter{})
 	logrus.Infof("Starting %v\n", appName)
 
-	config.LoadConfigurationFromBranch(
-		viper.GetString("configServerURL"),
-		appName,
-		viper.GetString("profile"),
-		viper.GetString("configBranch"))
+	// Initialize config struct and populate it froms env vars and flags.
+	cfg := cmd.DefaultConfiguration()
+	arg.MustParse(cfg)
 
 	service.DBClient = &dbclient.GormClient{}
-	service.DBClient.SetupDB(viper.GetString("cockroachdb_conn_url"))
+	service.DBClient.SetupDB(cfg.CockroachdbConnUrl)
 	service.DBClient.SeedAccounts()
 
-	initializeTracing()
+	initializeTracing(cfg)
 
 	handleSigterm(func() {
 		logrus.Infoln("Captured Ctrl+C")
 		service.DBClient.Close()
 	})
-	service.StartWebServer(viper.GetString("server_port"))
+	service.StartWebServer(cfg.Name, cfg.ServerConfig.Port)
 }
-func initializeTracing() {
-	tracing.InitTracing(viper.GetString("zipkin_server_url"), appName)
+func initializeTracing(cfg *cmd.Config) {
+	tracing.InitTracing(cfg.ZipkinServerUrl, appName)
 }
 
 // Handles Ctrl+C or most other means of "controlled" shutdown gracefully. Invokes the supplied func before exiting.

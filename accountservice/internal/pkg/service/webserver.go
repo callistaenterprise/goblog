@@ -1,15 +1,14 @@
 package service
 
 import (
-	"net/http"
-
 	"github.com/sirupsen/logrus"
+	"net/http"
 )
 
 // StartWebServer starts a web server at the designated port.
-func StartWebServer(port string) {
+func StartWebServer(serviceName, port string) {
 
-	r := NewRouter()
+	r := NewRouter(serviceName)
 	http.Handle("/", r)
 
 	logrus.Infof("Starting HTTP service at %v", port)

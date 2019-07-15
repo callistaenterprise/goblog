@@ -7,8 +7,8 @@ import (
 )
 
 // StartWebServer starts a webserver on the specified port.
-func StartWebServer(port string) {
-	r := NewRouter()
+func StartWebServer(serviceName, port string) {
+	r := NewRouter(serviceName)
 	http.Handle("/", r)
 
 	logrus.Println("Starting HTTP service at " + port)

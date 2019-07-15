@@ -7,9 +7,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func StartWebServer(port string) {
+func StartWebServer(serviceName, port string) {
 
-	r := NewRouter()
+	r := NewRouter(serviceName)
 	http.Handle("/", r)
 	logrus.Infof("Starting HTTP service at %v", port)
 	err := http.ListenAndServe(":"+port, nil)

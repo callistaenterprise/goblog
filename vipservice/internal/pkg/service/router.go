@@ -7,7 +7,7 @@ import (
 )
 
 // NewRouter from http://thenewstack.io/make-a-restful-json-api-go/
-func NewRouter() *mux.Router {
+func NewRouter(serviceName string) *mux.Router {
 
 	router := mux.NewRouter().StrictSlash(true)
 	for _, route := range routes {

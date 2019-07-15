@@ -12,11 +12,11 @@ import (
  * From http://thenewstack.io/make-a-restful-json-api-go/
  */
 // NewRouter creates a mux.Router pointer.
-func NewRouter() *mux.Router {
+func NewRouter(serviceName string) *mux.Router {
 
 	muxRouter := mux.NewRouter().StrictSlash(true)
 	for _, route := range routes {
-		summaryVec := monitoring.BuildSummaryVec(route.Name, route.Method+" "+route.Pattern)
+		summaryVec := monitoring.BuildSummaryVec(serviceName, route.Name, route.Method+" "+route.Pattern)
 
 		// Add route to muxRouter, including middleware chaining and passing the summaryVec to the WithMonitoring func.
 		muxRouter.Methods(route.Method).

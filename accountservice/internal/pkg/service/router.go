@@ -11,7 +11,7 @@ import (
 )
 
 // NewRouter creates a mux.Router and returns a pointer to it.
-func NewRouter() *mux.Router {
+func NewRouter(serviceName string) *mux.Router {
 
 	initQL(&LiveGraphQLResolvers{})
 
@@ -19,7 +19,7 @@ func NewRouter() *mux.Router {
 
 	for _, route := range routes {
 
-		summaryVec := monitoring.BuildSummaryVec(route.Name, route.Method+" "+route.Pattern)
+		summaryVec := monitoring.BuildSummaryVec(serviceName, route.Name, route.Method+" "+route.Pattern)
 
 		// Add route to muxRouter, including middleware chaining and passing the summaryVec to the WithMonitoring func.
 		muxRouter.Methods(route.Method).

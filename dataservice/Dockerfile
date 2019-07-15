@@ -14,4 +14,4 @@ ADD bin/dataservice /
 
 HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=5 CMD curl -sSf http://127.0.0.1:7070/health
 
-ENTRYPOINT ["./dataservice", "-configServerUrl=http://configserver:8888", "-profile=test", "-configBranch=P16"]
+ENTRYPOINT ["./dataservice"]

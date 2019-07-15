@@ -24,14 +24,13 @@ SOFTWARE.
 package main
 
 import (
-	"flag"
 	"fmt"
-	"github.com/callistaenterprise/goblog/common/config"
+	"github.com/alexflint/go-arg"
 	"github.com/callistaenterprise/goblog/common/messaging"
 	"github.com/callistaenterprise/goblog/common/tracing"
+	"github.com/callistaenterprise/goblog/vipservice/cmd"
 	"github.com/callistaenterprise/goblog/vipservice/internal/pkg/service"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 	"github.com/streadway/amqp"
 	"os"
 	"os/signal"
@@ -43,25 +42,16 @@ var appName = "vipservice"
 
 var messagingClient messaging.IMessagingClient
 
-func init() {
-	configServerURL := flag.String("configServerUrl", "http://configserver:8888", "Address to config server")
-	profile := flag.String("profile", "test", "Environment profile, something similar to spring profiles")
-	configBranch := flag.String("configBranch", "master", "git branch to fetch configuration from")
-	flag.Parse()
-
-	viper.Set("service_name", appName)
-	viper.Set("profile", *profile)
-	viper.Set("configServerUrl", *configServerURL)
-	viper.Set("configBranch", *configBranch)
-}
-
 func main() {
 	logrus.SetFormatter(&logrus.JSONFormatter{})
 	logrus.Println("Starting " + appName + "...")
 
-	config.LoadConfigurationFromBranch(viper.GetString("configServerUrl"), appName, viper.GetString("profile"), viper.GetString("configBranch"))
-	initializeMessaging()
-	initializeTracing()
+	// Initialize config struct and populate it froms env vars and flags.
+	cfg := cmd.DefaultConfiguration()
+	arg.MustParse(cfg)
+
+	initializeTracing(cfg)
+	initializeMessaging(cfg)
 
 	// Makes sure connection is closed when service exits.
 	handleSigterm(func() {
@@ -69,11 +59,11 @@ func main() {
 			messagingClient.Close()
 		}
 	})
-	service.StartWebServer(viper.GetString("server_port"))
+	service.StartWebServer(cfg.Name, cfg.Port)
 }
 
-func initializeTracing() {
-	tracing.InitTracing(viper.GetString("zipkin_server_url"), appName)
+func initializeTracing(cfg *cmd.Config) {
+	tracing.InitTracing(cfg.ZipkinServerUrl, appName)
 }
 
 func onMessage(delivery amqp.Delivery) {
@@ -98,19 +88,16 @@ func onMessage(delivery amqp.Delivery) {
 	time.Sleep(time.Millisecond * 10)
 }
 
-func initializeMessaging() {
-	if !viper.IsSet("amqp_server_url") {
+func initializeMessaging(cfg *cmd.Config) {
+	if cfg.AmqpConfig.ServerUrl == "" {
 		panic("No 'broker_url' set in configuration, cannot start")
 	}
 	messagingClient = &messaging.AmqpClient{}
-	messagingClient.ConnectToBroker(viper.GetString("amqp_server_url"))
+	messagingClient.ConnectToBroker(cfg.AmqpConfig.ServerUrl)
 
 	// Call the subscribe method with queue name and callback function
 	err := messagingClient.SubscribeToQueue("vip_queue", appName, onMessage)
 	failOnError(err, "Could not start subscribe to vip_queue")
-
-	err = messagingClient.Subscribe(viper.GetString("config_event_bus"), "topic", appName, config.HandleRefreshEvent)
-	failOnError(err, "Could not start subscribe to "+viper.GetString("config_event_bus")+" topic")
 
 	logrus.Infoln("Successfully initialized messaging for vipservice")
 }

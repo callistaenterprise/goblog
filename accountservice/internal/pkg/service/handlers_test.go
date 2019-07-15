@@ -21,6 +21,8 @@ import (
 
 var mockMessagingClient *messaging.MockMessagingClient
 
+var serviceName = "accountservice"
+
 // mock types
 var anyString = mock.AnythingOfType("string")
 var anyByteArray = mock.AnythingOfType("[]uint8")
@@ -55,7 +57,7 @@ func TestGetAccount(t *testing.T) {
 		resp := httptest.NewRecorder()
 
 		Convey("When the request is handled by the Router", func() {
-			NewRouter().ServeHTTP(resp, req)
+			NewRouter(serviceName).ServeHTTP(resp, req)
 
 			Convey("Then the response should be a 200", func() {
 				So(resp.Code, ShouldEqual, 200)
@@ -74,7 +76,7 @@ func TestGetAccount(t *testing.T) {
 		resp := httptest.NewRecorder()
 
 		Convey("When the request is handled by the Router", func() {
-			NewRouter().ServeHTTP(resp, req)
+			NewRouter(serviceName).ServeHTTP(resp, req)
 
 			Convey("Then the response should be a 500", func() {
 				So(resp.Code, ShouldEqual, 500)
@@ -90,7 +92,7 @@ func TestGetAccountWrongPath(t *testing.T) {
 		resp := httptest.NewRecorder()
 
 		Convey("When the request is handled by the Router", func() {
-			NewRouter().ServeHTTP(resp, req)
+			NewRouter(serviceName).ServeHTTP(resp, req)
 
 			Convey("Then the response should be a 404", func() {
 				So(resp.Code, ShouldEqual, 404)
@@ -123,7 +125,7 @@ func TestGetAccountNoQuote(t *testing.T) {
 		resp := httptest.NewRecorder()
 
 		Convey("When the request is handled by the Router", func() {
-			NewRouter().ServeHTTP(resp, req)
+			NewRouter(serviceName).ServeHTTP(resp, req)
 
 			Convey("Then the response should be a 200", func() {
 				So(resp.Code, ShouldEqual, 200)
@@ -162,7 +164,7 @@ func TestNotificationIsSentForVIPAccount(t *testing.T) {
 		req := httptest.NewRequest("GET", "/accounts/10000", nil)
 		resp := httptest.NewRecorder()
 		Convey("When the request is handled by the Router", func() {
-			NewRouter().ServeHTTP(resp, req)
+			NewRouter(serviceName).ServeHTTP(resp, req)
 			Convey("Then the response should be a 200 and the MessageClient should have been invoked", func() {
 				So(resp.Code, ShouldEqual, 200)
 				time.Sleep(time.Millisecond * 10) // Sleep since the Assert below occurs in goroutine
@@ -180,7 +182,7 @@ func TestHealthCheckOk(t *testing.T) {
 		req := httptest.NewRequest("GET", "/health", nil)
 		resp := httptest.NewRecorder()
 		Convey("When served", func() {
-			NewRouter().ServeHTTP(resp, req)
+			NewRouter(serviceName).ServeHTTP(resp, req)
 			Convey("Then expect 200 OK", func() {
 				So(resp.Code, ShouldEqual, 200)
 			})
@@ -201,7 +203,7 @@ func TestQueryAccountUsingGraphQL(t *testing.T) {
 		resp := httptest.NewRecorder()
 
 		Convey("When the request is handled by the Router", func() {
-			NewRouter().ServeHTTP(resp, req)
+			NewRouter(serviceName).ServeHTTP(resp, req)
 
 			Convey("Then the response should be a 200", func() {
 				So(resp.Code, ShouldEqual, 200)
@@ -225,7 +227,7 @@ func TestQueryAccountSmallUsingGraphQL(t *testing.T) {
 		resp := httptest.NewRecorder()
 
 		Convey("When the request is handled by the Router", func() {
-			NewRouter().ServeHTTP(resp, req)
+			NewRouter(serviceName).ServeHTTP(resp, req)
 
 			Convey("Then the response should be a 200", func() {
 				So(resp.Code, ShouldEqual, 200)
