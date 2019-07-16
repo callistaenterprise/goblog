@@ -2,6 +2,7 @@ package dbclient
 
 import (
 	"fmt"
+	"github.com/callistaenterprise/goblog/imageservice/cmd"
 	"strconv"
 
 	"context"
@@ -9,7 +10,6 @@ import (
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/mock"
 	"github.com/twinj/uuid"
 )
 
@@ -49,6 +49,12 @@ func (gc *GormClient) UpdateAccountImage(ctx context.Context, accountImage model
 
 type GormClient struct {
 	crDB *gorm.DB
+}
+
+func NewGormClient(cfg *cmd.Config) *GormClient {
+	gc := &GormClient{}
+	gc.SetupDB(cfg.CockroachdbConnUrl)
+	return gc
 }
 
 func (gc *GormClient) Check() bool {
@@ -107,41 +113,4 @@ func (gc *GormClient) SeedAccountImages() error {
 		logrus.Infoln("Successfully created AccountImage instance.")
 	}
 	return nil
-}
-
-// MockGormClient is a mock implementation of a datastore client for testing purposes
-type MockGormClient struct {
-	mock.Mock
-}
-
-func (m *MockGormClient) UpdateAccountImage(ctx context.Context, accountImage model.AccountImage) (model.AccountImage, error) {
-	args := m.Mock.Called(ctx, accountImage)
-	return args.Get(0).(model.AccountImage), args.Error(1)
-}
-func (m *MockGormClient) StoreAccountImage(ctx context.Context, accountImage model.AccountImage) (model.AccountImage, error) {
-	args := m.Mock.Called(ctx, accountImage)
-	return args.Get(0).(model.AccountImage), args.Error(1)
-}
-
-func (m *MockGormClient) QueryAccountImage(ctx context.Context, accountId string) (model.AccountImage, error) {
-	args := m.Mock.Called(ctx, accountId)
-	return args.Get(0).(model.AccountImage), args.Error(1)
-}
-
-func (m *MockGormClient) SetupDB(addr string) {
-	// Does nothing
-}
-
-func (m *MockGormClient) SeedAccountImages() error {
-	args := m.Mock.Called()
-	return args.Get(0).(error)
-}
-
-func (m *MockGormClient) Check() bool {
-	args := m.Mock.Called()
-	return args.Get(0).(bool)
-}
-
-func (m *MockGormClient) Close() {
-	// Does nothing
 }

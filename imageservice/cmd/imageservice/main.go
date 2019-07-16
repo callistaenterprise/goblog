@@ -33,7 +33,6 @@ import (
 	"github.com/callistaenterprise/goblog/imageservice/internal/pkg/dbclient"
 	"github.com/callistaenterprise/goblog/imageservice/internal/pkg/service"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 	"os"
 	"os/signal"
 	"syscall"
@@ -51,21 +50,21 @@ func main() {
 	cfg := cmd.DefaultConfiguration()
 	arg.MustParse(cfg)
 
+	server := service.NewServer(dbclient.NewGormClient(cfg), cfg)
+	server.SetupRoutes()
+
 	initializeTracing(cfg)
-	service.DBClient = &dbclient.GormClient{}
-	service.DBClient.SetupDB(viper.GetString("cockroachdb_conn_url"))
 
 	if cfg.Environment == "dev" {
-		service.DBClient.SeedAccountImages()
+		server.SeedAccountImages()
 	}
-
-	go service.StartWebServer(cfg.ServerConfig.Name, cfg.ServerConfig.Port) // Starts HTTP service  (async)
 
 	handleSigterm(func() {
 		logrus.Infoln("Captured Ctrl+C")
-		service.DBClient.Close()
+		server.Close()
 	})
 
+	go server.Start()
 	logrus.Infof("Started %v in %v", appName, time.Now().UTC().Sub(start))
 	// Block...
 	wg := sync.WaitGroup{} // Use a WaitGroup to block main() exit

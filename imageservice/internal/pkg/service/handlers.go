@@ -11,14 +11,10 @@ import (
 
 	"github.com/callistaenterprise/goblog/common/model"
 	"github.com/callistaenterprise/goblog/common/util"
-	"github.com/callistaenterprise/goblog/imageservice/internal/pkg/dbclient"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
 )
-
-// DBClient is our GORM instance.
-var DBClient dbclient.IGormClient
 
 var myIp string
 
@@ -30,7 +26,7 @@ func init() {
 	}
 }
 
-func CreateAccountImage(w http.ResponseWriter, r *http.Request) {
+func (s *Server) CreateAccountImage(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	accountImage := model.AccountImage{}
 	err = json.Unmarshal(body, &accountImage)
@@ -39,7 +35,7 @@ func CreateAccountImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accountImage, err = DBClient.StoreAccountImage(r.Context(), accountImage)
+	accountImage, err = s.dbClient.StoreAccountImage(r.Context(), accountImage)
 	if err != nil {
 		writeServerError(w, err.Error())
 		return
@@ -48,7 +44,7 @@ func CreateAccountImage(w http.ResponseWriter, r *http.Request) {
 	writeAndReturn(w, respData)
 }
 
-func UpdateAccountImage(w http.ResponseWriter, r *http.Request) {
+func (s *Server) UpdateAccountImage(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	accountImage := model.AccountImage{}
 	err = json.Unmarshal(body, &accountImage)
@@ -61,7 +57,7 @@ func UpdateAccountImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accountImage, err = DBClient.StoreAccountImage(r.Context(), accountImage)
+	accountImage, err = s.dbClient.StoreAccountImage(r.Context(), accountImage)
 	if err != nil {
 		writeServerError(w, err.Error())
 		return
@@ -70,8 +66,8 @@ func UpdateAccountImage(w http.ResponseWriter, r *http.Request) {
 	writeAndReturn(w, respData)
 }
 
-func GetAccountImage(w http.ResponseWriter, r *http.Request) {
-	accountImage, err := DBClient.QueryAccountImage(r.Context(), mux.Vars(r)["accountId"])
+func (s *Server) GetAccountImage(w http.ResponseWriter, r *http.Request) {
+	accountImage, err := s.dbClient.QueryAccountImage(r.Context(), mux.Vars(r)["accountId"])
 	accountImage.ServedBy = myIp
 	data, err := json.Marshal(&accountImage)
 	if err != nil {
@@ -91,7 +87,7 @@ func writeResponse(w http.ResponseWriter, data []byte) {
 /**
  * Takes the filename and tries to decode an image from /testimages/{filename}. Used for testing.
  */
-func ProcessImageFromFile(w http.ResponseWriter, r *http.Request) {
+func (s *Server) ProcessImageFromFile(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	var filename = vars["filename"]
