@@ -3,8 +3,6 @@ version: "3.7"
 services:
   accountservice:
     image: someprefix/accountservice
-    command:
-      - "accountservice"
     environment:
       ENVIRONMENT: "test"
     restart: unless-stopped
@@ -19,8 +17,6 @@ services:
 
   dataservice:
     image: someprefix/dataservice
-    command:
-      - "dataservice"
     environment:
       ENVIRONMENT: "test"
     restart: unless-stopped
@@ -35,8 +31,6 @@ services:
 
   imageservice:
     image: someprefix/imageservice
-    command:
-      - "imageservice"
     environment:
       ENVIRONMENT: "test"
     restart: unless-stopped
@@ -51,8 +45,6 @@ services:
 
   vipservice:
     image: someprefix/vipservice
-    command:
-      - "vipservice"
     environment:
       ENVIRONMENT: "test"
     restart: unless-stopped

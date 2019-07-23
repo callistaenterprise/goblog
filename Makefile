@@ -14,6 +14,13 @@ build:
 	$(MAKE) -C imageservice/ build
 	$(MAKE) -C vipservice/ build
 
+fmt:
+	$(MAKE) -C accountservice/ fmt
+	$(MAKE) -C dataservice/ fmt
+	$(MAKE) -C imageservice/ fmt
+	$(MAKE) -C vipservice/ fmt
+	$(MAKE) -C common/ fmt
+
 network:
 	docker network create --driver overlay my_network
 
