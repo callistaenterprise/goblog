@@ -22,17 +22,15 @@ func main() {
 	cfg := cmd.DefaultConfiguration()
 	arg.MustParse(cfg)
 
-	service.DBClient = &dbclient.GormClient{}
-	service.DBClient.SetupDB(cfg.CockroachdbConnUrl)
-	service.DBClient.SeedAccounts()
-
+	server := service.NewServer(dbclient.NewGormClient(cfg), cfg)
+	server.SetupRoutes()
 	initializeTracing(cfg)
 
 	handleSigterm(func() {
 		logrus.Infoln("Captured Ctrl+C")
-		service.DBClient.Close()
+		server.Close()
 	})
-	service.StartWebServer(cfg.Name, cfg.ServerConfig.Port)
+	server.Start()
 }
 func initializeTracing(cfg *cmd.Config) {
 	tracing.InitTracing(cfg.ZipkinServerUrl, appName)

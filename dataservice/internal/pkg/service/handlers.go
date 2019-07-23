@@ -1,18 +1,17 @@
-package http
+package service
 
 import (
 	"encoding/json"
+	"github.com/callistaenterprise/goblog/common/model"
+	"github.com/go-chi/chi"
+	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
 	"strconv"
-
-	"github.com/callistaenterprise/goblog/common/model"
-	"github.com/gorilla/mux"
-	"github.com/sirupsen/logrus"
 )
 
 func (s *Server) GetAccountByNameWithCount(w http.ResponseWriter, r *http.Request) {
-	var accountName = mux.Vars(r)["accountName"]
+	var accountName = chi.URLParam(r, "accountName")
 	result, _ := s.dbClient.QueryAccountByNameWithCount(r.Context(), accountName)
 	data, _ := json.Marshal(&result)
 	writeJSONResponse(w, http.StatusOK, data)
@@ -58,7 +57,7 @@ func (s *Server) StoreAccount(w http.ResponseWriter, r *http.Request) {
 func (s *Server) GetAccount(w http.ResponseWriter, r *http.Request) {
 
 	// Read the 'accountId' path parameter from the mux map
-	var accountID = mux.Vars(r)["accountId"]
+	var accountID = chi.URLParam(r, "accountId")
 
 	account, err := s.dbClient.QueryAccount(r.Context(), accountID)
 

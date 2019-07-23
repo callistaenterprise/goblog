@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"github.com/callistaenterprise/goblog/common/model"
 	"github.com/callistaenterprise/goblog/common/tracing"
+	"github.com/callistaenterprise/goblog/dataservice/cmd"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/mock"
 	"github.com/twinj/uuid"
 	"strconv"
 )
@@ -27,6 +27,12 @@ type IGormClient interface {
 
 type GormClient struct {
 	crDB *gorm.DB
+}
+
+func NewGormClient(cfg *cmd.Config) *GormClient {
+	gc := &GormClient{}
+	gc.SetupDB(cfg.CockroachdbConnUrl)
+	return gc
 }
 
 func (gc *GormClient) Check() bool {
@@ -157,6 +163,8 @@ func (gc *GormClient) SetupDB(addr string) {
 
 	// Migrate the schema
 	gc.crDB.AutoMigrate(&model.AccountData{}, &model.AccountEvent{})
+
+	logrus.Info("Successfully connected to DB and executed auto-migration")
 }
 
 func (gc *GormClient) SeedAccounts() error {
@@ -186,52 +194,4 @@ func (gc *GormClient) SeedAccounts() error {
 type Pair struct {
 	Name  string
 	Count uint8
-}
-
-// MockGormClient is a mock implementation of a datastore client for testing purposes
-type MockGormClient struct {
-	mock.Mock
-}
-
-func (m *MockGormClient) StoreAccount(ctx context.Context, accountData model.AccountData) (model.AccountData, error) {
-	args := m.Mock.Called(accountData)
-	return args.Get(0).(model.AccountData), args.Error(1)
-}
-
-func (m *MockGormClient) UpdateAccount(ctx context.Context, accountData model.AccountData) (model.AccountData, error) {
-	args := m.Mock.Called(accountData)
-	return args.Get(0).(model.AccountData), args.Error(1)
-}
-
-func (m *MockGormClient) QueryAccount(ctx context.Context, accountId string) (model.AccountData, error) {
-	args := m.Mock.Called(ctx, accountId)
-	return args.Get(0).(model.AccountData), args.Error(1)
-}
-
-func (m *MockGormClient) GetRandomAccount(ctx context.Context) (model.AccountData, error) {
-	args := m.Mock.Called(ctx)
-	return args.Get(0).(model.AccountData), args.Error(1)
-}
-
-func (m *MockGormClient) QueryAccountByNameWithCount(ctx context.Context, name string) ([]Pair, error) {
-	args := m.Mock.Called(ctx, name)
-	return args.Get(0).([]Pair), args.Error(1)
-}
-
-func (m *MockGormClient) SetupDB(addr string) {
-	// Does nothing
-}
-
-func (m *MockGormClient) SeedAccounts() error {
-	args := m.Mock.Called()
-	return args.Get(0).(error)
-}
-
-func (m *MockGormClient) Check() bool {
-	args := m.Mock.Called()
-	return args.Get(0).(bool)
-}
-
-func (m *MockGormClient) Close() {
-	// Does nothing
 }

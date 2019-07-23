@@ -19,6 +19,9 @@ build:
 fmt:
 	find . -name '*.go' | grep -v vendor | xargs gofmt -w -s
 
+mock:
+	mockgen -source internal/pkg/dbclient/cockroachdb.go -destination internal/pkg/dbclient/mock_dbclient/mock_dbclient.go -package mock_dbclient
+
 test:
 	go test ./...
 
