@@ -30,7 +30,9 @@ func (s *Server) Close() {
 
 func (s *Server) Start() {
 
-	err := http.ListenAndServe(s.cfg.Port, s.r)
+	logrus.Infof("Starting HTTP server at '%v'", ":"+s.cfg.Port)
+
+	err := http.ListenAndServe(":"+s.cfg.Port, s.r)
 	if err != nil {
 		logrus.WithError(err).Fatal("error starting HTTP server")
 	}
