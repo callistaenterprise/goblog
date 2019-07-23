@@ -13,11 +13,7 @@ import (
 var schema graphql.Schema
 var schemaInitialized = false
 
-// define custom GraphQL ObjectType `todoType` for our Golang struct `Todo`
-// Note that
-// - the fields in our todoType maps with the json tags for the fields in our struct
-// - the field type matches the field type in our struct
-
+// Used for testing...
 var accounts []internalmodel.Account
 
 // init seeds some test data.
@@ -35,7 +31,7 @@ func init() {
 	}
 }
 
-func initQL(resolvers GraphQLResolvers) {
+func initGraphQL(resolvers GraphQLResolvers) {
 	if schemaInitialized {
 		return
 	}

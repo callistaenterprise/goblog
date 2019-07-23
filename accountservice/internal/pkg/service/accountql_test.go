@@ -48,7 +48,7 @@ var fetchAllAccountsQuery = `query fetchAllAccounts {
 }`
 
 func TestFetchAccount(t *testing.T) {
-	initQL(&TestGraphQLResolvers{})
+	initGraphQL(&TestGraphQLResolvers{})
 	vars := make(map[string]interface{})
 	vars["accid"] = "123"
 	params := graphql.Params{Schema: schema, VariableValues: vars, RequestString: fetchAccountQuery}
@@ -61,7 +61,7 @@ func TestFetchAccount(t *testing.T) {
 }
 
 func TestFetchAliasedAccounts(t *testing.T) {
-	initQL(&TestGraphQLResolvers{})
+	initGraphQL(&TestGraphQLResolvers{})
 	params := graphql.Params{Schema: schema, RequestString: fetchAliasedAccountsQuery} //{...AccountFragment,quote{quote,language}}}fragment AccountFragment on Account{id,name}"}
 
 	r := graphql.Do(params)

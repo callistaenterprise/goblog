@@ -1,25 +1,26 @@
 package service
 
 import (
-	"encoding/json"
-	"net/http/httptest"
-	"testing"
-	"time"
-
 	"context"
+	"encoding/json"
+	"github.com/callistaenterprise/goblog/accountservice/cmd"
 	internalmodel "github.com/callistaenterprise/goblog/accountservice/internal/pkg/model"
 	"github.com/callistaenterprise/goblog/common/circuitbreaker"
 	"github.com/callistaenterprise/goblog/common/messaging"
 	"github.com/callistaenterprise/goblog/common/tracing"
 	"github.com/opentracing/opentracing-go"
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"gopkg.in/h2non/gock.v1"
 	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"strings"
+	"testing"
+	"time"
 )
 
-var mockMessagingClient *messaging.MockMessagingClient
+//var mockMessagingClient *messaging.MockMessagingClient
 
 var serviceName = "accountservice"
 
@@ -29,14 +30,13 @@ var anyByteArray = mock.AnythingOfType("[]uint8")
 
 // Run this first in each test, poor substitute for a proper @Before func
 func reset() {
-	mockMessagingClient = &messaging.MockMessagingClient{}
-	gock.InterceptClient(client)
-	circuitbreaker.Client = *client
-	tracing.SetTracer(opentracing.NoopTracer{})
+
 }
 
 func TestGetAccount(t *testing.T) {
-	reset()
+
+	srv := setup()
+
 	defer gock.Off()
 	gock.New("http://dataservice:7070").
 		Get("/accounts/123").
@@ -52,57 +52,49 @@ func TestGetAccount(t *testing.T) {
 		Reply(200).
 		BodyString(`{"imageUrl":"http://test.path"}`)
 
-	Convey("Given a HTTP request for /accounts/123", t, func() {
-		req := httptest.NewRequest("GET", "/accounts/123", nil)
-		resp := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/accounts/123", nil)
+	resp := httptest.NewRecorder()
 
-		Convey("When the request is handled by the Router", func() {
-			NewRouter(serviceName).ServeHTTP(resp, req)
+	srv.r.ServeHTTP(resp, req)
 
-			Convey("Then the response should be a 200", func() {
-				So(resp.Code, ShouldEqual, 200)
+	assert.Equal(t, 200, resp.Code)
 
-				account := internalmodel.Account{}
-				json.Unmarshal(resp.Body.Bytes(), &account)
-				So(account.ID, ShouldEqual, "123")
-				So(account.Name, ShouldEqual, "Test Testsson")
-				So(account.Quote.Text, ShouldEqual, "May the source be with you, always.")
-			})
-		})
-	})
+	account := internalmodel.Account{}
+	_ = json.Unmarshal(resp.Body.Bytes(), &account)
 
-	Convey("Given a HTTP request for /accounts/456", t, func() {
-		req := httptest.NewRequest("GET", "/accounts/456", nil)
-		resp := httptest.NewRecorder()
+	assert.Equal(t, "123", account.ID)
+	assert.Equal(t, "Test Testsson", account.Name)
+	assert.Equal(t, "May the source be with you, always.", account.Quote.Text)
+}
 
-		Convey("When the request is handled by the Router", func() {
-			NewRouter(serviceName).ServeHTTP(resp, req)
+func TestGetAccountNotFound(t *testing.T) {
+	srv := setup()
 
-			Convey("Then the response should be a 500", func() {
-				So(resp.Code, ShouldEqual, 500)
-			})
-		})
-	})
+	gock.New("http://dataservice:7070").
+		Get("/accounts/456").Times(5).
+		Reply(404)
+
+	req := httptest.NewRequest("GET", "/accounts/456", nil)
+	resp := httptest.NewRecorder()
+
+	srv.r.ServeHTTP(resp, req)
+
+	// Note that even if the dataservice returns HTTP 404, the accountservice will expose a 500 externally.
+	assert.Equal(t, 500, resp.Code)
 }
 
 func TestGetAccountWrongPath(t *testing.T) {
-	reset()
-	Convey("Given a HTTP request for /invalid/123", t, func() {
-		req := httptest.NewRequest("GET", "/invalid/123", nil)
-		resp := httptest.NewRecorder()
+	srv := setup()
+	req := httptest.NewRequest("GET", "/invalid/123", nil)
+	resp := httptest.NewRecorder()
 
-		Convey("When the request is handled by the Router", func() {
-			NewRouter(serviceName).ServeHTTP(resp, req)
+	srv.r.ServeHTTP(resp, req)
 
-			Convey("Then the response should be a 404", func() {
-				So(resp.Code, ShouldEqual, 404)
-			})
-		})
-	})
+	assert.Equal(t, 404, resp.Code)
 }
 
 func TestGetAccountNoQuote(t *testing.T) {
-	reset()
+	srv := setup()
 	defer gock.Off()
 	gock.New("http://dataservice:7070").
 		Get("/accounts/123").
@@ -111,37 +103,32 @@ func TestGetAccountNoQuote(t *testing.T) {
 
 	gock.New("http://quotes-service:8080").
 		Get("/api/quote").
-		MatchParam("strength", "4").
+		MatchParam("strength", "4").Times(4).
 		Reply(500).
 		BodyString(`{"imageUrl":"http://test.path"}`)
 
 	gock.New("http://imageservice:7777").
-		Get("/accounts/10000").
+		Get("/accounts/123").
 		Reply(200).
 		BodyString(`{"imageUrl":"http://test.path"}`)
 
-	Convey("Given a HTTP request for /accounts/123", t, func() {
-		req := httptest.NewRequest("GET", "/accounts/123", nil).WithContext(context.TODO())
-		resp := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/accounts/123", nil).WithContext(context.TODO())
+	resp := httptest.NewRecorder()
 
-		Convey("When the request is handled by the Router", func() {
-			NewRouter(serviceName).ServeHTTP(resp, req)
+	srv.r.ServeHTTP(resp, req)
 
-			Convey("Then the response should be a 200", func() {
-				So(resp.Code, ShouldEqual, 200)
+	assert.Equal(t, 200, resp.Code)
 
-				account := internalmodel.Account{}
-				json.Unmarshal(resp.Body.Bytes(), &account)
-				So(account.ID, ShouldEqual, "123")
-				So(account.Name, ShouldEqual, "Test Testsson")
-				So(account.Quote.Text, ShouldEqual, "May the source be with you, always.")
-			})
-		})
-	})
+	account := internalmodel.Account{}
+	_ = json.Unmarshal(resp.Body.Bytes(), &account)
+	assert.Equal(t, "123", account.ID)
+	assert.Equal(t, "Test Testsson", account.Name)
+	assert.Equal(t, "May the source be with you, always.", account.Quote.Text)
+
 }
 
 func TestNotificationIsSentForVIPAccount(t *testing.T) {
-	reset()
+	srv := setup()
 	gock.New("http://dataservice:7070").
 		Get("/accounts/10000").
 		Reply(200).
@@ -157,83 +144,66 @@ func TestNotificationIsSentForVIPAccount(t *testing.T) {
 		Reply(200).
 		BodyString(`{"imageUrl":"http://test.path"}`)
 
-	mockMessagingClient.On("PublishOnQueueWithContext", mock.Anything, anyByteArray, anyString).Return(nil)
-	MessagingClient = mockMessagingClient
+	//srv.h.messagingClient = &messaging.MockMessagingClient{}
+	srv.h.messagingClient.(*messaging.MockMessagingClient).On("PublishOnQueueWithContext", mock.Anything, anyByteArray, anyString).Return(nil)
 
-	Convey("Given a HTTP req for a VIP account", t, func() {
-		req := httptest.NewRequest("GET", "/accounts/10000", nil)
-		resp := httptest.NewRecorder()
-		Convey("When the request is handled by the Router", func() {
-			NewRouter(serviceName).ServeHTTP(resp, req)
-			Convey("Then the response should be a 200 and the MessageClient should have been invoked", func() {
-				So(resp.Code, ShouldEqual, 200)
-				time.Sleep(time.Millisecond * 10) // Sleep since the Assert below occurs in goroutine
-				So(mockMessagingClient.AssertNumberOfCalls(t, "PublishOnQueueWithContext", 1), ShouldBeTrue)
-			})
-		})
-	})
+	req := httptest.NewRequest("GET", "/accounts/10000", nil)
+	resp := httptest.NewRecorder()
+	srv.r.ServeHTTP(resp, req)
+	assert.Equal(t, 200, resp.Code)
+	time.Sleep(time.Millisecond * 10) // Sleep since the Assert below occurs in goroutine
+	assert.True(t, srv.h.messagingClient.(*messaging.MockMessagingClient).AssertNumberOfCalls(t, "PublishOnQueueWithContext", 1))
 }
 
 func TestHealthCheckOk(t *testing.T) {
-	reset()
+	srv := setup()
+	srv.h.isHealthy = true
 
-	Convey("Given a HTTP req for /health", t, func() {
-
-		req := httptest.NewRequest("GET", "/health", nil)
-		resp := httptest.NewRecorder()
-		Convey("When served", func() {
-			NewRouter(serviceName).ServeHTTP(resp, req)
-			Convey("Then expect 200 OK", func() {
-				So(resp.Code, ShouldEqual, 200)
-			})
-		})
-	})
+	req := httptest.NewRequest("GET", "/health", nil)
+	resp := httptest.NewRecorder()
+	srv.r.ServeHTTP(resp, req)
+	assert.Equal(t, 200, resp.Code)
 }
 
 // Tests the /ql graphQL endpoint
 func TestQueryAccountUsingGraphQL(t *testing.T) {
-	tracing.SetTracer(opentracing.NoopTracer{})
-	initQL(&TestGraphQLResolvers{})
+	srv := setup()
 
 	query := "{Account(id:\"123\"){id,name,quote(language:\"sv\"){quote,language}}}"
 
-	Convey("Given a GraphQL request for {Account{id,name}}", t, func() {
-		req := httptest.NewRequest("POST", "/graphql", strings.NewReader(query))
-		req.Header.Add("Content-Type", "application/graphql")
-		resp := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/graphql", strings.NewReader(query))
+	req.Header.Add("Content-Type", "application/graphql")
+	resp := httptest.NewRecorder()
 
-		Convey("When the request is handled by the Router", func() {
-			NewRouter(serviceName).ServeHTTP(resp, req)
+	srv.r.ServeHTTP(resp, req)
 
-			Convey("Then the response should be a 200", func() {
-				So(resp.Code, ShouldEqual, 200)
-				body, _ := ioutil.ReadAll(resp.Body)
-				So(string(body), ShouldEqual, `{"data":{"Account":{"id":"123","name":"Test Testsson 3","quote":{"language":"sv","quote":"HEJ"}}}}`)
-			})
-		})
-	})
+	assert.Equal(t, 200, resp.Code)
+	body, _ := ioutil.ReadAll(resp.Body)
+	assert.Equal(t, `{"data":{"Account":{"id":"123","name":"Test Testsson 3","quote":{"language":"sv","quote":"HEJ"}}}}`, string(body))
+}
+
+func setup() *Server {
+	client := &http.Client{}
+	gock.InterceptClient(client)
+	circuitbreaker.Client = client
+	tracing.SetTracer(opentracing.NoopTracer{})
+	s := NewServer(cmd.DefaultConfiguration(), NewHandler(&messaging.MockMessagingClient{}, client), &TestGraphQLResolvers{})
+	s.SetupRoutes()
+	return s
 }
 
 // Tests the /ql graphQL endpoint
 func TestQueryAccountSmallUsingGraphQL(t *testing.T) {
-	tracing.SetTracer(opentracing.NoopTracer{})
-	initQL(&TestGraphQLResolvers{})
-
+	srv := setup()
 	query := "{Account(id:\"123\"){id}}"
 
-	Convey("Given a GraphQL request for {Account{id,name}}", t, func() {
-		req := httptest.NewRequest("POST", "/graphql", strings.NewReader(query))
-		req.Header.Add("Content-Type", "application/graphql")
-		resp := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/graphql", strings.NewReader(query))
+	req.Header.Add("Content-Type", "application/graphql")
+	resp := httptest.NewRecorder()
 
-		Convey("When the request is handled by the Router", func() {
-			NewRouter(serviceName).ServeHTTP(resp, req)
+	srv.r.ServeHTTP(resp, req)
 
-			Convey("Then the response should be a 200", func() {
-				So(resp.Code, ShouldEqual, 200)
-				body, _ := ioutil.ReadAll(resp.Body)
-				So(string(body), ShouldEqual, `{"data":{"Account":{"id":"123"}}}`)
-			})
-		})
-	})
+	assert.Equal(t, 200, resp.Code)
+	body, _ := ioutil.ReadAll(resp.Body)
+	assert.Equal(t, `{"data":{"Account":{"id":"123"}}}`, string(body))
 }

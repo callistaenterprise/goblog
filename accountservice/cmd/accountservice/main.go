@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/callistaenterprise/goblog/accountservice/cmd"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -25,26 +26,40 @@ func main() {
 	arg.MustParse(cfg)
 
 	initializeTracing(cfg)
-	initializeMessaging(cfg)
-	cb.ConfigureHystrix([]string{"account-to-data", "account-to-image", "account-to-quotes"}, service.MessagingClient)
+	mc := initializeMessaging(cfg)
+	cb.ConfigureHystrix([]string{"account-to-data", "account-to-image", "account-to-quotes"}, mc)
+
+	client := &http.Client{}
+	var transport http.RoundTripper = &http.Transport{
+		DisableKeepAlives: true,
+	}
+	client.Transport = transport
+	cb.Client = client
+	h := service.NewHandler(mc, client)
+	qlResolvers := service.NewLiveGraphQLResolvers(h)
+
+	s := service.NewServer(cfg, h, qlResolvers)
+	s.SetupRoutes()
 
 	handleSigterm(func() {
-		cb.Deregister(service.MessagingClient)
-		service.MessagingClient.Close()
+		cb.Deregister(mc)
+		mc.Close()
+		s.Close()
 	})
-	service.StartWebServer(cfg.Name, cfg.ServerConfig.Port)
+	s.Start()
 }
 func initializeTracing(cfg *cmd.Config) {
 	tracing.InitTracing(cfg.ZipkinServerUrl, appName)
 }
 
-func initializeMessaging(cfg *cmd.Config) {
+func initializeMessaging(cfg *cmd.Config) *messaging.AmqpClient {
 	if cfg.AmqpConfig.ServerUrl == "" {
 		panic("No 'amqp_server_url' set in configuration, cannot start")
 	}
 
-	service.MessagingClient = &messaging.AmqpClient{}
-	service.MessagingClient.ConnectToBroker(cfg.AmqpConfig.ServerUrl)
+	mc := &messaging.AmqpClient{}
+	mc.ConnectToBroker(cfg.AmqpConfig.ServerUrl)
+	return mc
 }
 
 // Handles Ctrl+C or most other means of "controlled" shutdown gracefully. Invokes the supplied func before exiting.

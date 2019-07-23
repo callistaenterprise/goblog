@@ -2,6 +2,8 @@ package service
 
 import (
 	"encoding/json"
+	"github.com/callistaenterprise/goblog/common/messaging"
+	"github.com/go-chi/chi"
 	"net/http"
 	"strconv"
 	"time"
@@ -12,42 +14,37 @@ import (
 	"fmt"
 	internalmodel "github.com/callistaenterprise/goblog/accountservice/internal/pkg/model"
 	cb "github.com/callistaenterprise/goblog/common/circuitbreaker"
-	"github.com/callistaenterprise/goblog/common/messaging"
 	"github.com/callistaenterprise/goblog/common/model"
 	"github.com/callistaenterprise/goblog/common/tracing"
 	"github.com/callistaenterprise/goblog/common/util"
-	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
 )
 
 // MessagingClient instance
-var MessagingClient messaging.IMessagingClient
+//var MessagingClient messaging.IMessagingClient
 
-var myIP string
-var isHealthy = true
-var client = &http.Client{}
+type Handler struct {
+	messagingClient messaging.IMessagingClient
+	client          *http.Client
+	myIP            string
+	isHealthy       bool
+}
+
+func NewHandler(messagingClient messaging.IMessagingClient, client *http.Client) *Handler {
+	myIP, err := util.ResolveIPFromHostsFile()
+	if err != nil {
+		myIP = util.GetIP()
+	}
+	return &Handler{messagingClient: messagingClient, client: client, myIP: myIP, isHealthy: true}
+}
 
 var fallbackQuote = internalmodel.Quote{
 	Language: "en",
 	ServedBy: "circuit-breaker",
 	Text:     "May the source be with you, always."}
 
-func init() {
-	var transport http.RoundTripper = &http.Transport{
-		DisableKeepAlives: true,
-	}
-	client.Transport = transport
-	cb.Client = *client
-	var err error
-	myIP, err = util.ResolveIPFromHostsFile()
-	if err != nil {
-		myIP = util.GetIP()
-	}
-	fmt.Println("Init method executed")
-}
-
-func StoreAccount(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) StoreAccount(w http.ResponseWriter, r *http.Request) {
 	data, err := ioutil.ReadAll(r.Body)
 	account := &internalmodel.Account{}
 	err = json.Unmarshal(data, &account)
@@ -60,18 +57,18 @@ func StoreAccount(w http.ResponseWriter, r *http.Request) {
 	postBody, err := json.Marshal(&accountData)
 	storeReq, err := http.NewRequest("POST", "http://dataservice:7070/accounts", bytes.NewReader(postBody))
 	tracing.AddTracingToReqFromContext(r.Context(), storeReq)
-	resp, err := client.Do(storeReq)
+	resp, err := h.client.Do(storeReq)
 
 	if err == nil && resp.StatusCode < 299 {
 		respData, _ := ioutil.ReadAll(resp.Body)
-		json.Unmarshal(respData, &accountData)
+		_ = json.Unmarshal(respData, &accountData)
 		writeJSONResponse(w, resp.StatusCode, []byte("{\"ID\":\""+accountData.ID+"\"}"))
 	} else {
 		writeJSONResponse(w, http.StatusInternalServerError, []byte("{\"response\":\""+err.Error()+"\"}"))
 	}
 }
 
-func UpdateAccount(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) UpdateAccount(w http.ResponseWriter, r *http.Request) {
 	data, err := ioutil.ReadAll(r.Body)
 	account := &internalmodel.Account{}
 	err = json.Unmarshal(data, &account)
@@ -91,13 +88,13 @@ func UpdateAccount(w http.ResponseWriter, r *http.Request) {
 
 	storeReq, err := http.NewRequest("PUT", "http://dataservice:7070/accounts", bytes.NewReader(putBody))
 	tracing.AddTracingToReqFromContext(r.Context(), storeReq)
-	resp, err := client.Do(storeReq)
+	resp, err := h.client.Do(storeReq)
 	if err == nil && resp.StatusCode < 299 {
 		respData, _ := ioutil.ReadAll(resp.Body)
-		json.Unmarshal(respData, &accountData)
+		_ = json.Unmarshal(respData, &accountData)
 		account.Name = accountData.Name
 		account.AccountEvents = accountData.Events
-		account.ServedBy = myIP
+		account.ServedBy = h.myIP
 		outData, _ := json.Marshal(&account)
 		writeJSONResponse(w, resp.StatusCode, outData)
 	} else {
@@ -106,12 +103,16 @@ func UpdateAccount(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetAccount loads an account instance, including a quote and an image URL using sub-services.
-func GetAccount(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetAccount(w http.ResponseWriter, r *http.Request) {
 
 	// Read the 'accountId' path parameter from the mux map
-	var accountID = mux.Vars(r)["accountId"]
+	var accountID = chi.URLParam(r, "accountId")
+	if accountID == "" {
+		writeJSONResponse(w, http.StatusBadRequest, []byte("accountId parameter is missing"))
+		return
+	}
 
-	account, err := getAccount(r.Context(), accountID)
+	account, err := h.getAccount(r.Context(), accountID)
 	if err != nil {
 		writeJSONResponse(w, http.StatusInternalServerError, []byte(err.Error()))
 		return
@@ -120,40 +121,40 @@ func GetAccount(w http.ResponseWriter, r *http.Request) {
 		writeJSONResponse(w, http.StatusNotFound, []byte("Account identified by '"+accountID+"' not found"))
 		return
 	}
-	account.Quote = getQuote(r.Context())
-	account.ImageData = getImageURL(r.Context(), accountID)
-	account.ServedBy = myIP
+	account.Quote = h.getQuote(r.Context())
+	account.ImageData = h.getImageURL(r.Context(), accountID)
+	account.ServedBy = h.myIP
 
-	notifyVIP(r.Context(), account) // Send VIP notification concurrently.
+	h.notifyVIP(r.Context(), account) // Send VIP notification concurrently.
 
 	// If found, marshal into JSON, write headers and content
 	data, _ := json.Marshal(account)
 	writeJSONResponse(w, http.StatusOK, data)
 }
 
-func fetchAccount(ctx context.Context, accountID string) (internalmodel.Account, error) {
-	account, err := getAccount(ctx, accountID)
+func (h *Handler) fetchAccount(ctx context.Context, accountID string) (internalmodel.Account, error) {
+	account, err := h.getAccount(ctx, accountID)
 	if err != nil {
 		return account, err
 	}
-	account.Quote = getQuote(ctx)
-	account.ImageData = getImageURL(ctx, accountID)
-	account.ServedBy = myIP
+	account.Quote = h.getQuote(ctx)
+	account.ImageData = h.getImageURL(ctx, accountID)
+	account.ServedBy = h.myIP
 
-	notifyVIP(ctx, account) // Send VIP notification concurrently.
+	h.notifyVIP(ctx, account) // Send VIP notification concurrently.
 
 	// If found, marshal into JSON, write headers and content
 	return account, nil
 }
 
 // If our hard-coded "VIP" account, spawn a goroutine to send a message.
-func notifyVIP(ctx context.Context, account internalmodel.Account) {
+func (h *Handler) notifyVIP(ctx context.Context, account internalmodel.Account) {
 	if account.ID == "10000" {
 		go func(account internalmodel.Account) {
 			vipNotification := internalmodel.VipNotification{AccountID: account.ID, ReadAt: time.Now().UTC().String()}
 			data, _ := json.Marshal(vipNotification)
 			logrus.Infof("Notifying VIP account %v\n", account.ID)
-			err := MessagingClient.PublishOnQueueWithContext(ctx, data, "vip_queue")
+			err := h.messagingClient.PublishOnQueueWithContext(ctx, data, "vip_queue")
 			if err != nil {
 				logrus.Errorln(err.Error())
 			}
@@ -163,7 +164,7 @@ func notifyVIP(ctx context.Context, account internalmodel.Account) {
 	}
 }
 
-func getQuote(ctx context.Context) internalmodel.Quote {
+func (h *Handler) getQuote(ctx context.Context) internalmodel.Quote {
 	// Start a new opentracing child span
 	child := tracing.StartSpanFromContextWithLogEvent(ctx, "getQuote", "Client send")
 	defer tracing.CloseSpan(child, "Client Receive")
@@ -173,13 +174,13 @@ func getQuote(ctx context.Context) internalmodel.Quote {
 	body, err := cb.PerformHTTPRequestCircuitBreaker(tracing.UpdateContext(ctx, child), "account-to-quotes", req)
 	if err == nil {
 		quote := internalmodel.Quote{}
-		json.Unmarshal(body, &quote)
+		_ = json.Unmarshal(body, &quote)
 		return quote
 	}
 	return fallbackQuote
 }
 
-func getAccount(ctx context.Context, accountID string) (internalmodel.Account, error) {
+func (h *Handler) getAccount(ctx context.Context, accountID string) (internalmodel.Account, error) {
 	// Start a new opentracing child span
 	child := tracing.StartSpanFromContextWithLogEvent(ctx, "getAccountData", "Client send")
 	defer tracing.CloseSpan(child, "Client Receive")
@@ -189,7 +190,7 @@ func getAccount(ctx context.Context, accountID string) (internalmodel.Account, e
 	body, err := cb.PerformHTTPRequestCircuitBreaker(tracing.UpdateContext(ctx, child), "account-to-data", req)
 	if err == nil {
 		accountData := model.AccountData{}
-		json.Unmarshal(body, &accountData)
+		_ = json.Unmarshal(body, &accountData)
 		return toAccount(accountData), nil
 	}
 	logrus.Errorf("Error: %v\n", err.Error())
@@ -202,7 +203,7 @@ func toAccount(accountData model.AccountData) internalmodel.Account {
 	}
 }
 
-func getImageURL(ctx context.Context, accountID string) model.AccountImage {
+func (h *Handler) getImageURL(ctx context.Context, accountID string) model.AccountImage {
 	child := tracing.StartSpanFromContextWithLogEvent(ctx, "getImageUrl", "Client send")
 	defer tracing.CloseSpan(child, "Client Receive")
 
@@ -220,10 +221,10 @@ func getImageURL(ctx context.Context, accountID string) model.AccountImage {
 }
 
 // HealthCheck will return OK if the underlying BoltDB is healthy. At least healthy enough for demoing purposes.
-func HealthCheck(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 	// Since we're here, we already know that HTTP service is up. Let's just check the state of the boltdb connection
 	dbUp := true
-	if dbUp && isHealthy {
+	if dbUp && h.isHealthy {
 		data, _ := json.Marshal(healthCheckResponse{Status: "UP"})
 		writeJSONResponse(w, http.StatusOK, data)
 		logrus.Infoln("Wrote health respo OK")
@@ -234,16 +235,16 @@ func HealthCheck(w http.ResponseWriter, r *http.Request) {
 }
 
 // SetHealthyState can be used fake health problems.
-func SetHealthyState(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) SetHealthyState(w http.ResponseWriter, r *http.Request) {
 	// Read the 'accountId' path parameter from the mux map
-	var state, err = strconv.ParseBool(mux.Vars(r)["state"])
+	var state, err = strconv.ParseBool(chi.URLParam(r, "state"))
 	if err != nil {
 		logrus.Errorln("Invalid request to SetHealthyState, allowed values are true or false")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	isHealthy = state
+	h.isHealthy = state
 	w.WriteHeader(http.StatusOK)
 }
 

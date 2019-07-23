@@ -12,10 +12,15 @@ type GraphQLResolvers interface {
 
 // LiveGraphQLResolvers implementations
 type LiveGraphQLResolvers struct {
+	h *Handler
+}
+
+func NewLiveGraphQLResolvers(h *Handler) *LiveGraphQLResolvers {
+	return &LiveGraphQLResolvers{h: h}
 }
 
 func (gqlres *LiveGraphQLResolvers) AccountResolverFunc(p graphql.ResolveParams) (interface{}, error) {
-	account, err := fetchAccount(p.Context, p.Args["id"].(string))
+	account, err := gqlres.h.fetchAccount(p.Context, p.Args["id"].(string))
 	if err != nil {
 		return nil, err
 	}
