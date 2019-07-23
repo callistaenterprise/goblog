@@ -1,11 +1,12 @@
 package circuitbreaker
 
 import (
+	"github.com/stretchr/testify/assert"
+	"net/http"
 	"testing"
 
 	"github.com/afex/hystrix-go/hystrix"
 	"github.com/sirupsen/logrus"
-	. "github.com/smartystreets/goconvey/convey"
 	"golang.org/x/net/context"
 	"gopkg.in/h2non/gock.v1"
 )
@@ -16,6 +17,7 @@ func init() {
 		TimestampFormat: "2006-01-02T15:04:05.000",
 	})
 	logrus.SetLevel(logrus.DebugLevel)
+	Client = &http.Client{}
 }
 
 func TestCallUsingResilienceAllFails(t *testing.T) {
@@ -24,17 +26,10 @@ func TestCallUsingResilienceAllFails(t *testing.T) {
 	buildGockMatcherTimes(500, 4)
 	hystrix.Flush()
 
-	Convey("Given that we've mocked 4 requests to return 500 Server Error", t, func() {
+	bytes, err := CallUsingCircuitBreaker(context.TODO(), "TEST", "http://quotes-service", "GET")
 
-		Convey("When ", func() {
-			bytes, err := CallUsingCircuitBreaker(context.TODO(), "TEST", "http://quotes-service", "GET")
-
-			Convey("Then", func() {
-				So(err, ShouldNotBeNil)
-				So(bytes, ShouldBeNil)
-			})
-		})
-	})
+	assert.NotNil(t, err)
+	assert.Nil(t, bytes)
 }
 
 func TestCallUsingResilienceLastSucceeds(t *testing.T) {
@@ -45,18 +40,11 @@ func TestCallUsingResilienceLastSucceeds(t *testing.T) {
 	buildGockMatcherWithBody(200, string(body))
 	hystrix.Flush()
 
-	Convey("Given a Call request", t, func() {
+	bytes, err := CallUsingCircuitBreaker(context.TODO(), "TEST", "http://quotes-service", "GET")
 
-		Convey("When", func() {
-			bytes, err := CallUsingCircuitBreaker(context.TODO(), "TEST", "http://quotes-service", "GET")
-
-			Convey("Then", func() {
-				So(err, ShouldBeNil)
-				So(bytes, ShouldNotBeNil)
-				So(string(bytes), ShouldEqual, string(body))
-			})
-		})
-	})
+	assert.Nil(t, err)
+	assert.NotNil(t, bytes)
+	assert.Equal(t, string(body), string(bytes))
 }
 
 func TestCallHystrixOpensAfterThresholdPassed(t *testing.T) {
@@ -66,22 +54,17 @@ func TestCallHystrixOpensAfterThresholdPassed(t *testing.T) {
 	}
 	hystrix.Flush()
 
-	Convey("Given hystrix allows 5 failed requests with no retries", t, func() {
-		retries = 0
-		hystrix.ConfigureCommand("TEST", hystrix.CommandConfig{
-			RequestVolumeThreshold: 5,
-		})
-		Convey("When 6 failed requests performed", func() {
-			for a := 0; a < 6; a++ {
-				CallUsingCircuitBreaker(context.TODO(), "TEST", "http://quotes-service", "GET")
-			}
-
-			Convey("Then make sure the circuit has been opened", func() {
-				cb, _, _ := hystrix.GetCircuit("TEST")
-				So(cb.IsOpen(), ShouldBeTrue)
-			})
-		})
+	retries = 0
+	hystrix.ConfigureCommand("TEST", hystrix.CommandConfig{
+		RequestVolumeThreshold: 5,
 	})
+	for a := 0; a < 6; a++ {
+		CallUsingCircuitBreaker(context.TODO(), "TEST", "http://quotes-service", "GET")
+	}
+
+	cb, _, _ := hystrix.GetCircuit("TEST")
+	assert.True(t, cb.IsOpen())
+
 }
 
 func buildGockMatcherTimes(status int, times int) {

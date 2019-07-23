@@ -24,7 +24,7 @@ func init() {
 }
 
 // Client to do http requests with
-var Client http.Client
+var Client *http.Client
 
 // RETRIES is the number of retries to do in the retrier.
 var retries = 3
