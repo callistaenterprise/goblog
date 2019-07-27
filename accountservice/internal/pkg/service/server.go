@@ -46,19 +46,22 @@ func (s *Server) SetupRoutes() {
 	s.r.Use(middleware.Logger)
 	s.r.Use(middleware.Recoverer)
 	s.r.Use(middleware.Timeout(time.Minute))
-	s.r.Use(Tracing)
 
 	// Sub-routers with monitoring
 	s.r.Route("/accounts", func(r chi.Router) {
-		r.With(Monitor(s.cfg.Name, "GetAccount", "GET /accounts/{accountId}")).
+		r.With(Trace("Get_Account")).
+			With(Monitor(s.cfg.Name, "GetAccount", "GET /accounts/{accountId}")).
 			Get("/{accountId}", s.h.GetAccount)
-		r.With(Monitor(s.cfg.Name, "StoreAccount", "POST /accounts")).
+		r.With(Trace("StoreAccount")).
+			With(Monitor(s.cfg.Name, "StoreAccount", "POST /accounts")).
 			Post("/", s.h.StoreAccount)
-		r.With(Monitor(s.cfg.Name, "UpdateAccount", "PUT /accounts")).
+		r.With(Trace("UpdateAccount")).
+			With(Monitor(s.cfg.Name, "UpdateAccount", "PUT /accounts")).
 			Put("/", s.h.UpdateAccount)
 	})
 
-	s.r.With(Monitor(s.cfg.Name, "GraphQL", "POST /graphql")).
+	s.r.With(Trace("GraphQL")).
+		With(Monitor(s.cfg.Name, "GraphQL", "POST /graphql")).
 		Post("/graphql", gqlhandler.New(&gqlhandler.Config{
 			Schema: &schema,
 			Pretty: false,
@@ -91,12 +94,16 @@ func Monitor(serviceName, routeName, signature string) func(http.Handler) http.H
 	}
 }
 
-func Tracing(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		span := tracing.StartHTTPTrace(req, req.RequestURI)
-		defer span.Finish()
+func Trace(opName string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+			logrus.Infof("starting span for %v", opName)
+			span := tracing.StartHTTPTrace(req, opName)
+			ctx := tracing.UpdateContext(req.Context(), span)
+			next.ServeHTTP(rw, req.WithContext(ctx))
 
-		ctx := tracing.UpdateContext(req.Context(), span)
-		next.ServeHTTP(rw, req.WithContext(ctx))
-	})
+			span.Finish()
+			logrus.Infof("finished span for %v", opName)
+		})
+	}
 }

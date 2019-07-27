@@ -48,7 +48,7 @@ func TestGetAccount(t *testing.T) {
 		Reply(200).
 		BodyString(`{"quote":"May the source be with you, always.","ipAddress":"10.0.0.5:8080","language":"en"}`)
 	gock.New("http://imageservice:7777").
-		Get("/accounts/10000").
+		Get("/accounts/123").
 		Reply(200).
 		BodyString(`{"imageUrl":"http://test.path"}`)
 

@@ -21,9 +21,6 @@ import (
 	"io/ioutil"
 )
 
-// MessagingClient instance
-//var MessagingClient messaging.IMessagingClient
-
 type Handler struct {
 	messagingClient messaging.IMessagingClient
 	client          *http.Client
@@ -166,8 +163,8 @@ func (h *Handler) notifyVIP(ctx context.Context, account internalmodel.Account) 
 
 func (h *Handler) getQuote(ctx context.Context) internalmodel.Quote {
 	// Start a new opentracing child span
-	child := tracing.StartSpanFromContextWithLogEvent(ctx, "getQuote", "Client send")
-	defer tracing.CloseSpan(child, "Client Receive")
+	child := tracing.StartSpanFromContextWithLogEvent(ctx, "getQuote", "getQuote send")
+	defer tracing.CloseSpan(child, "getQuote receive")
 
 	// Create the http request and pass it to the circuit breaker
 	req, err := http.NewRequest("GET", "http://quotes-service:8080/api/quote?strength=4", nil)
@@ -182,8 +179,8 @@ func (h *Handler) getQuote(ctx context.Context) internalmodel.Quote {
 
 func (h *Handler) getAccount(ctx context.Context, accountID string) (internalmodel.Account, error) {
 	// Start a new opentracing child span
-	child := tracing.StartSpanFromContextWithLogEvent(ctx, "getAccountData", "Client send")
-	defer tracing.CloseSpan(child, "Client Receive")
+	child := tracing.StartSpanFromContextWithLogEvent(ctx, "getAccountData", "getAccount send")
+	defer tracing.CloseSpan(child, "getAccount receive")
 
 	// Create the http request and pass it to the circuit breaker
 	req, err := http.NewRequest("GET", "http://dataservice:7070/accounts/"+accountID, nil)
@@ -204,8 +201,8 @@ func toAccount(accountData model.AccountData) internalmodel.Account {
 }
 
 func (h *Handler) getImageURL(ctx context.Context, accountID string) model.AccountImage {
-	child := tracing.StartSpanFromContextWithLogEvent(ctx, "getImageUrl", "Client send")
-	defer tracing.CloseSpan(child, "Client Receive")
+	child := tracing.StartSpanFromContextWithLogEvent(ctx, "getImageUrl", "getImageURL send")
+	defer tracing.CloseSpan(child, "getImageURL receive")
 
 	req, err := http.NewRequest("GET", "http://imageservice:7777/accounts/"+accountID, nil)
 	body, err := cb.PerformHTTPRequestCircuitBreaker(tracing.UpdateContext(ctx, child), "account-to-image", req)
@@ -227,7 +224,6 @@ func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 	if dbUp && h.isHealthy {
 		data, _ := json.Marshal(healthCheckResponse{Status: "UP"})
 		writeJSONResponse(w, http.StatusOK, data)
-		logrus.Infoln("Wrote health respo OK")
 	} else {
 		data, _ := json.Marshal(healthCheckResponse{Status: "Database unaccessible"})
 		writeJSONResponse(w, http.StatusServiceUnavailable, data)
