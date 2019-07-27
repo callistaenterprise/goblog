@@ -33,7 +33,7 @@ func InitTracing(zipkinURL string, serviceName string) {
 			fmt.Sprintf("%s/api/v1/spans", zipkinURL) + ". Error: " + err.Error())
 	}
 	tracer, err = zipkin.NewTracer(
-		zipkin.NewRecorder(collector, false, "127.0.0.1:0", serviceName))
+		zipkin.NewRecorder(collector, true, "127.0.0.1:0", serviceName))
 	if err != nil {
 		logrus.Errorln("Error starting new zipkin tracer. Error: " + err.Error())
 		panic("Error starting new zipkin tracer. Error: " + err.Error())
@@ -101,6 +101,7 @@ func AddTracingToReq(req *http.Request, span opentracing.Span) {
 // AddTracingToReqFromContext adds tracing information to an OUTGOING HTTP request
 func AddTracingToReqFromContext(ctx context.Context, req *http.Request) {
 	if ctx.Value("opentracing-span") == nil {
+		logrus.Warnf("could not find 'opentracing-span' in outgoing context for request %v", req.RequestURI)
 		return
 	}
 	carrier := opentracing.HTTPHeadersCarrier(req.Header)
