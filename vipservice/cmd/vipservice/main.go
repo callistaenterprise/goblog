@@ -50,6 +50,9 @@ func main() {
 	cfg := cmd.DefaultConfiguration()
 	arg.MustParse(cfg)
 
+	srv := service.NewServer(cfg)
+	srv.SetupRoutes()
+
 	initializeTracing(cfg)
 	initializeMessaging(cfg)
 
@@ -59,7 +62,7 @@ func main() {
 			messagingClient.Close()
 		}
 	})
-	service.StartWebServer(cfg.Name, cfg.Port)
+	srv.Start()
 }
 
 func initializeTracing(cfg *cmd.Config) {
