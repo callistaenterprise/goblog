@@ -14,6 +14,13 @@ build:
 	$(MAKE) -C imageservice/ build
 	$(MAKE) -C vipservice/ build
 
+test:
+	$(MAKE) -C accountservice/ test
+	$(MAKE) -C dataservice/ test
+	$(MAKE) -C imageservice/ test
+	$(MAKE) -C vipservice/ test
+	$(MAKE) -C common/ test
+
 fmt:
 	$(MAKE) -C accountservice/ fmt
 	$(MAKE) -C dataservice/ fmt
