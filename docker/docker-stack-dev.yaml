@@ -3,6 +3,8 @@ version: "3.7"
 services:
   accountservice:
     image: someprefix/accountservice
+    ports:
+      - 6767:6767
     environment:
       ENVIRONMENT: "test"
     restart: unless-stopped
@@ -149,16 +151,6 @@ services:
     networks:
       - my_network
 
-  configserver:
-    image: someprefix/configserver
-    ports:
-      - 8888:8888
-    deploy:
-      mode: replicated
-      replicas: 1
-    networks:
-      - my_network
-
   rabbitmq:
     image: rabbitmq:3-management
     ports:
@@ -171,7 +163,6 @@ services:
       mode: replicated
       replicas: 1
 
-  # docker service create  --constraint node.role==manager --mount type=volume,source=swarm-endpoints,target=/etc/swarm-endpoints/,volume-driver=local --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock --name=swarm-prometheus-discovery --replicas=1 --network=my_network someprefix/swarm-prometheus-discovery
   swarm-prometheus-discovery:
     image: someprefix/swarm-prometheus-discovery
     networks:
@@ -180,7 +171,6 @@ services:
       - "swarm-endpoints:/etc/swarm-endpoints/"
       - "/var/run/docker.sock:/var/run/docker.sock"
 
-  # docker service create -p 9090:9090 --constraint node.role==manager --mount type=volume,source=swarm-endpoints,target=/etc/swarm-endpoints/,volume-driver=local --name=prometheus --replicas=1 --network=my_network someprefix/prometheus
   prometheus:
     image: prom/prometheus
     ports:
@@ -191,7 +181,6 @@ services:
       - "swarm-endpoints:/etc/swarm-endpoints/"
       - "./config/prometheus:/etc/prometheus"
 
-  # docker service create -p 3000:3000 --constraint node.role==manager --name=grafana --replicas=1 --network=my_network grafana/grafana
   grafana:
     image: grafana/grafana
     ports:
