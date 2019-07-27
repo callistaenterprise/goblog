@@ -50,7 +50,7 @@ func main() {
 	cfg := cmd.DefaultConfiguration()
 	arg.MustParse(cfg)
 
-	server := service.NewServer(dbclient.NewGormClient(cfg), cfg)
+	server := service.NewServer(service.NewHandler(dbclient.NewGormClient(cfg)), cfg)
 	server.SetupRoutes()
 
 	initializeTracing(cfg)

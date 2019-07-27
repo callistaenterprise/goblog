@@ -4,7 +4,6 @@ import (
 	"github.com/callistaenterprise/goblog/common/monitoring"
 	"github.com/callistaenterprise/goblog/common/tracing"
 	"github.com/callistaenterprise/goblog/imageservice/cmd"
-	"github.com/callistaenterprise/goblog/imageservice/internal/pkg/dbclient"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -15,17 +14,17 @@ import (
 )
 
 type Server struct {
-	dbClient dbclient.IGormClient
-	cfg      *cmd.Config
-	r        *chi.Mux
+	h   *Handler
+	cfg *cmd.Config
+	r   *chi.Mux
 }
 
-func NewServer(dbClient dbclient.IGormClient, cfg *cmd.Config) *Server {
-	return &Server{dbClient: dbClient, cfg: cfg}
+func NewServer(h *Handler, cfg *cmd.Config) *Server {
+	return &Server{h: h, cfg: cfg}
 }
 
 func (s *Server) Close() {
-	s.dbClient.Close()
+	s.h.Close()
 }
 
 func (s *Server) Start() {
@@ -44,18 +43,23 @@ func (s *Server) SetupRoutes() {
 	s.r.Use(middleware.RequestID)
 	s.r.Use(middleware.RealIP)
 	s.r.Use(middleware.Logger)
+	s.r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+			logrus.Infof("Headers:\n%+v", req.Header)
+			next.ServeHTTP(rw, req)
+		})
+	})
 	s.r.Use(middleware.Recoverer)
 	s.r.Use(middleware.Timeout(time.Minute))
-	s.r.Use(Tracing)
 
 	// Sub-routers with monitoring
 	s.r.Route("/accounts", func(r chi.Router) {
-		s.r.With(Monitor(s.cfg.Name, "GetAccountImage", "GET /accounts/{accountId}")).Get("/{accountId}", s.GetAccountImage)
-		s.r.With(Monitor(s.cfg.Name, "CreateAccountImage", "POST /accounts")).Post("/", s.CreateAccountImage)
-		s.r.With(Monitor(s.cfg.Name, "UpdateAccountImage", "PUT /accounts")).Put("/", s.UpdateAccountImage)
+		s.r.With(Trace("GetAccountImage")).With(Monitor(s.cfg.Name, "GetAccountImage", "GET /accounts/{accountId}")).Get("/{accountId}", s.h.GetAccountImage)
+		s.r.With(Trace("CreateAccountImage")).With(Monitor(s.cfg.Name, "CreateAccountImage", "POST /accounts")).Post("/", s.h.CreateAccountImage)
+		s.r.With(Trace("UpdateAccountImage")).With(Monitor(s.cfg.Name, "UpdateAccountImage", "PUT /accounts")).Put("/", s.h.UpdateAccountImage)
 	})
 	s.r.Route("/file", func(r chi.Router) {
-		s.r.With(Monitor(s.cfg.Name, "ProcessImage", "GET /file/{filename}")).Get("/{filename}", s.ProcessImageFromFile)
+		s.r.With(Trace("GetAccountImage")).With(Monitor(s.cfg.Name, "ProcessImage", "GET /file/{filename}")).Get("/{filename}", s.h.ProcessImageFromFile)
 	})
 
 	s.r.Get("/health", func(rw http.ResponseWriter, req *http.Request) {
@@ -66,7 +70,7 @@ func (s *Server) SetupRoutes() {
 }
 
 func (s *Server) SeedAccountImages() {
-	err := s.dbClient.SeedAccountImages()
+	err := s.h.dbClient.SeedAccountImages()
 	if err != nil {
 		logrus.WithError(err).Fatal("error seeding account images")
 	}
@@ -93,12 +97,16 @@ func Monitor(serviceName, routeName, signature string) func(http.Handler) http.H
 	}
 }
 
-func Tracing(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		span := tracing.StartHTTPTrace(req, req.RequestURI)
-		defer span.Finish()
+func Trace(opName string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+			logrus.Infof("starting span for %v", opName)
+			span := tracing.StartHTTPTrace(req, opName)
+			ctx := tracing.UpdateContext(req.Context(), span)
+			next.ServeHTTP(rw, req.WithContext(ctx))
 
-		ctx := tracing.UpdateContext(req.Context(), span)
-		next.ServeHTTP(rw, req.WithContext(ctx))
-	})
+			span.Finish()
+			logrus.Infof("finished span for %v", opName)
+		})
+	}
 }

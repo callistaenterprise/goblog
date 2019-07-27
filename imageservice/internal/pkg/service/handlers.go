@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/callistaenterprise/goblog/imageservice/internal/pkg/dbclient"
 	"image"
 	"net/http"
 	"os"
@@ -16,17 +17,21 @@ import (
 	"io/ioutil"
 )
 
-var myIp string
-
-func init() {
-	var err error
-	myIp, err = util.ResolveIPFromHostsFile()
-	if err != nil {
-		myIp = util.GetIP()
-	}
+type Handler struct {
+	dbClient  dbclient.IGormClient
+	myIP      string
+	isHealthy bool
 }
 
-func (s *Server) CreateAccountImage(w http.ResponseWriter, r *http.Request) {
+func NewHandler(dbClient dbclient.IGormClient) *Handler {
+	myIP, err := util.ResolveIPFromHostsFile()
+	if err != nil {
+		myIP = util.GetIP()
+	}
+	return &Handler{dbClient: dbClient, myIP: myIP, isHealthy: true}
+}
+
+func (h *Handler) CreateAccountImage(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	accountImage := model.AccountImage{}
 	err = json.Unmarshal(body, &accountImage)
@@ -35,16 +40,16 @@ func (s *Server) CreateAccountImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accountImage, err = s.dbClient.StoreAccountImage(r.Context(), accountImage)
+	accountImage, err = h.dbClient.StoreAccountImage(r.Context(), accountImage)
 	if err != nil {
 		writeServerError(w, err.Error())
 		return
 	}
 	respData, _ := json.Marshal(&accountImage)
-	writeAndReturn(w, respData)
+	writeResponse(w, respData)
 }
 
-func (s *Server) UpdateAccountImage(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) UpdateAccountImage(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	accountImage := model.AccountImage{}
 	err = json.Unmarshal(body, &accountImage)
@@ -57,37 +62,30 @@ func (s *Server) UpdateAccountImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accountImage, err = s.dbClient.StoreAccountImage(r.Context(), accountImage)
+	accountImage, err = h.dbClient.StoreAccountImage(r.Context(), accountImage)
 	if err != nil {
 		writeServerError(w, err.Error())
 		return
 	}
 	respData, _ := json.Marshal(&accountImage)
-	writeAndReturn(w, respData)
+	writeResponse(w, respData)
 }
 
-func (s *Server) GetAccountImage(w http.ResponseWriter, r *http.Request) {
-	accountImage, err := s.dbClient.QueryAccountImage(r.Context(), mux.Vars(r)["accountId"])
-	accountImage.ServedBy = myIp
+func (h *Handler) GetAccountImage(w http.ResponseWriter, r *http.Request) {
+	accountImage, err := h.dbClient.QueryAccountImage(r.Context(), mux.Vars(r)["accountId"])
+	accountImage.ServedBy = h.myIP
 	data, err := json.Marshal(&accountImage)
 	if err != nil {
 		writeServerError(w, err.Error())
 	} else {
 		writeResponse(w, data)
 	}
-
-}
-func writeResponse(w http.ResponseWriter, data []byte) {
-	w.Header().Set("Content-Type", "text/plain")
-	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
-	w.WriteHeader(http.StatusOK)
-	w.Write(data)
 }
 
 /**
  * Takes the filename and tries to decode an image from /testimages/{filename}. Used for testing.
  */
-func (s *Server) ProcessImageFromFile(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ProcessImageFromFile(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	var filename = vars["filename"]
@@ -114,15 +112,18 @@ func (s *Server) ProcessImageFromFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	outputData := buf.Bytes()
-	writeAndReturn(w, outputData)
+	writeResponse(w, outputData)
 }
 
-func writeAndReturn(w http.ResponseWriter, outputData []byte) {
+func (h *Handler) Close() {
+	h.dbClient.Close()
+}
 
-	w.Header().Set("Content-Type", "image/jpeg")
-	w.Header().Set("Content-Length", strconv.Itoa(len(outputData)))
+func writeResponse(w http.ResponseWriter, data []byte) {
+	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
 	w.WriteHeader(http.StatusOK)
-	w.Write(outputData)
+	w.Write(data)
 }
 
 func writeServerError(w http.ResponseWriter, msg string) {
