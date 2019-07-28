@@ -29,7 +29,7 @@ import (
 	"github.com/callistaenterprise/goblog/common/messaging"
 	"github.com/callistaenterprise/goblog/common/tracing"
 	"github.com/callistaenterprise/goblog/vipservice/cmd"
-	"github.com/callistaenterprise/goblog/vipservice/internal/pkg/service"
+	"github.com/callistaenterprise/goblog/vipservice/internal/app/service"
 	"github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
 	"os"

@@ -1,6 +1,6 @@
 SHELL 	 := /bin/bash
 
-all: clean build swarm-services
+all: clean build deploy
 
 clean:
 	$(MAKE) -C accountservice/ clean

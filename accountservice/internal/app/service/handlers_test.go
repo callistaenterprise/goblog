@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/callistaenterprise/goblog/accountservice/cmd"
-	internalmodel "github.com/callistaenterprise/goblog/accountservice/internal/pkg/model"
+	internalmodel "github.com/callistaenterprise/goblog/accountservice/internal/app/model"
 	"github.com/callistaenterprise/goblog/common/circuitbreaker"
 	"github.com/callistaenterprise/goblog/common/messaging"
 	"github.com/callistaenterprise/goblog/common/tracing"

@@ -12,7 +12,7 @@ import (
 
 	"bytes"
 	"fmt"
-	internalmodel "github.com/callistaenterprise/goblog/accountservice/internal/pkg/model"
+	internalmodel "github.com/callistaenterprise/goblog/accountservice/internal/app/model"
 	cb "github.com/callistaenterprise/goblog/common/circuitbreaker"
 	"github.com/callistaenterprise/goblog/common/model"
 	"github.com/callistaenterprise/goblog/common/tracing"

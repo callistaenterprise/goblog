@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/callistaenterprise/goblog/imageservice/internal/pkg/dbclient"
+	"github.com/callistaenterprise/goblog/imageservice/internal/app/dbclient"
 	"image"
 	"net/http"
 	"os"

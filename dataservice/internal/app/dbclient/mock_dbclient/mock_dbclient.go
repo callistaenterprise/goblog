@@ -7,7 +7,7 @@ package mock_dbclient
 import (
 	context "context"
 	model "github.com/callistaenterprise/goblog/common/model"
-	dbclient "github.com/callistaenterprise/goblog/dataservice/internal/pkg/dbclient"
+	dbclient "github.com/callistaenterprise/goblog/dataservice/internal/app/dbclient"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )

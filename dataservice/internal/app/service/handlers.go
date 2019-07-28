@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"github.com/callistaenterprise/goblog/common/model"
 	"github.com/callistaenterprise/goblog/common/util"
-	"github.com/callistaenterprise/goblog/dataservice/internal/pkg/dbclient"
+	"github.com/callistaenterprise/goblog/dataservice/internal/app/dbclient"
 	"github.com/go-chi/chi"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"

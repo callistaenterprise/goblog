@@ -8,7 +8,7 @@ import (
 	"syscall"
 
 	"github.com/alexflint/go-arg"
-	"github.com/callistaenterprise/goblog/accountservice/internal/pkg/service"
+	"github.com/callistaenterprise/goblog/accountservice/internal/app/service"
 	cb "github.com/callistaenterprise/goblog/common/circuitbreaker"
 	"github.com/callistaenterprise/goblog/common/messaging"
 	"github.com/callistaenterprise/goblog/common/tracing"

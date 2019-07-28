@@ -30,8 +30,8 @@ import (
 	"time"
 
 	"github.com/callistaenterprise/goblog/common/tracing"
-	"github.com/callistaenterprise/goblog/imageservice/internal/pkg/dbclient"
-	"github.com/callistaenterprise/goblog/imageservice/internal/pkg/service"
+	"github.com/callistaenterprise/goblog/imageservice/internal/app/dbclient"
+	"github.com/callistaenterprise/goblog/imageservice/internal/app/service"
 	"github.com/sirupsen/logrus"
 	"os"
 	"os/signal"
