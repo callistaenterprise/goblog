@@ -13,6 +13,7 @@ import (
 	"strconv"
 )
 
+// IGormClient defines a number of operations we want to be able to perform vs an underlying data store.
 type IGormClient interface {
 	UpdateAccount(ctx context.Context, accountData model.AccountData) (model.AccountData, error)
 	StoreAccount(ctx context.Context, accountData model.AccountData) (model.AccountData, error)
@@ -40,7 +41,7 @@ func (gc *GormClient) Check() bool {
 }
 
 func (gc *GormClient) Close() {
-	logrus.Infoln("Closing connection to CockroachDB")
+	logrus.Info("Closing connection to CockroachDB")
 	gc.crDB.Close()
 }
 

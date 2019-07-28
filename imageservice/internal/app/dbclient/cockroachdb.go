@@ -89,6 +89,8 @@ func (gc *GormClient) SetupDB(addr string) {
 
 	// Migrate the schema
 	gc.crDB.AutoMigrate(&model.AccountImage{})
+
+	logrus.Info("Successfully connected to DB and executed auto-migration")
 }
 
 func (gc *GormClient) SeedAccountImages() error {
