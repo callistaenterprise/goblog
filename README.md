@@ -22,7 +22,7 @@ Make sure Turbine doesn't crash on startup due to AMQ connection problem.
     docker swarm join --token SWMTKN-1-5njothki0tww7gestuh309qgrnr6r357phlsn7ue0r8qmlqnla-181tl1rfou16vv3e7nxrk4ra3 192.168.99.100:2377
    
 ### Building
-You need Go 1.12 or later installed on your system to build from source.
+You need Go 1.14 or later installed on your system to build from source.
 
 Builds are performed using Makefile(s). In the root _/goblog_ folder:
 
